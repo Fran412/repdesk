@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RepDesk — Payment Tracking for University Course Reps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --paper:    #F5F4F0;
+      --paper2:   #EDEAE4;
+      --ink:      #0E1423;
+      --ink-mid:  #3D4A63;
+      --ink-faint:#8C96A8;
+      --rule:     #DDD9D0;
+      --rule-hard:#B8B2A7;
+      --vermil:   #E8400C;
+      --vermil-bg:#FDF0EB;
+      --navy:     #0E1423;
+      --navy-mid: #1B2640;
+      --pass:     #1A7A4A;
+      --pass-bg:  #EBF7F1;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── TOP ACCENT ── */
+    .top-accent { height: 3px; background: var(--vermil); }
+
+    /* ── NAV ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid var(--rule);
+      padding: 0 40px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .wordmark {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 20px;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .wordmark span { color: var(--vermil); }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    nav ul a {
+      text-decoration: none;
+      font-size: 13.5px;
+      color: var(--ink-faint);
+      font-weight: 500;
+      transition: color .15s;
+    }
+
+    nav ul a:hover { color: var(--ink); }
+
+    .nav-cta {
+      background: var(--vermil) !important;
+      color: #fff !important;
+      padding: 8px 20px;
+      border-radius: 4px;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      transition: background .15s !important;
+    }
+
+    .nav-cta:hover { background: #C93508 !important; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: calc(100vh - 57px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    /* Left — the problem */
+    .hero-left {
+      padding: 72px 56px 72px 64px;
+      border-right: 1px solid var(--rule);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .eyebrow {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 20px;
+    }
+
+    .hero-left h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(38px, 4vw, 56px);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -1.5px;
+      color: var(--ink);
+      margin-bottom: 24px;
+    }
+
+    .hero-left h1 em {
+      font-style: normal;
+      color: var(--vermil);
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+      max-width: 400px;
+      margin-bottom: 40px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-primary {
+      background: var(--vermil);
+      color: #fff;
+      border: none;
+      padding: 13px 28px;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background .15s;
+    }
+
+    .btn-primary:hover { background: #C93508; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink-mid);
+      border: 1px solid var(--rule);
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: border-color .15s, color .15s;
+    }
+
+    .btn-ghost:hover { border-color: var(--ink-faint); color: var(--ink); }
+
+    /* Right — the WhatsApp chaos (signature element) */
+    .hero-right {
+      background: var(--paper2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chaos-container {
+      width: 100%;
+      max-width: 360px;
+      position: relative;
+    }
+
+    /* Mock phone frame */
+    .phone-frame {
+      background: #111;
+      border-radius: 28px;
+      padding: 10px;
+      box-shadow: 0 32px 80px rgba(14,20,35,0.28);
+    }
+
+    .phone-screen {
+      background: #E5DDD5;
+      border-radius: 20px;
+      overflow: hidden;
+      min-height: 440px;
+    }
+
+    /* WhatsApp header */
+    .wa-header {
+      background: #075E54;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wa-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #25D366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .wa-name { color: #fff; font-size: 13.5px; font-weight: 700; }
+    .wa-status { color: rgba(255,255,255,0.65); font-size: 11px; }
+
+    /* Chat bubbles */
+    .wa-body { padding: 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+
+    .bubble {
+      max-width: 82%;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      line-height: 1.4;
+      position: relative;
+    }
+
+    .bubble-in {
+      background: #fff;
+      align-self: flex-start;
+      border-top-left-radius: 2px;
+    }
+
+    .bubble-out {
+      background: #DCF8C6;
+      align-self: flex-end;
+      border-top-right-radius: 2px;
+    }
+
+    .bubble-sender {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--vermil);
+      margin-bottom: 2px;
+    }
+
+    .bubble-time {
+      font-size: 10px;
+      color: #999;
+      text-align: right;
+      margin-top: 2px;
+    }
+
+    .bubble-img {
+      background: #ccc;
+      border-radius: 6px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    /* Unread badge */
+    .unread-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--vermil);
+      color: #fff;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 10.5px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* RepDesk card overlay */
+    .repdesk-card {
+      position: absolute;
+      bottom: -16px;
+      right: -20px;
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 32px rgba(14,20,35,0.16);
+      width: 180px;
+    }
+
+    .repdesk-card-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 6px;
+    }
+
+    .repdesk-card-stat {
+      font-family: Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: var(--pass);
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .repdesk-card-sub {
+      font-size: 11px;
+      color: var(--ink-faint);
+      margin-top: 4px;
+    }
+
+    .repdesk-card-bar {
+      margin-top: 10px;
+      background: var(--rule);
+      border-radius: 2px;
+      height: 4px;
+      overflow: hidden;
+    }
+
+    .repdesk-card-fill {
+      width: 72%;
+      height: 100%;
+      background: var(--pass);
+      border-radius: 2px;
+    }
+
+    /* ── PROBLEM STRIP ── */
+    .problem-strip {
+      background: var(--navy);
+      padding: 48px 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      border-bottom: 1px solid #1E2A40;
+    }
+
+    .problem-item {
+      padding: 32px 36px;
+      border-right: 1px solid #1E2A40;
+    }
+
+    .problem-item:last-child { border-right: none; }
+
+    .problem-number {
+      font-family: Georgia, serif;
+      font-size: 48px;
+      font-weight: 400;
+      color: var(--vermil);
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: 12px;
+    }
+
+    .problem-label {
+      font-size: 13px;
+      color: #6B7A9A;
+      line-height: 1.6;
+    }
+
+    .problem-label strong { color: #C5CDE0; font-weight: 600; }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      padding: 96px 64px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .section-eyebrow {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: Georgia, serif;
+      font-size: clamp(28px, 3vw, 40px);
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -0.8px;
+      margin-bottom: 56px;
+      max-width: 480px;
+      line-height: 1.2;
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .how-item {
+      background: var(--paper);
+      padding: 36px 36px;
+    }
+
+    .how-item:nth-child(even) { background: #fff; }
+
+    .how-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--vermil);
+      background: var(--vermil-bg);
+      border: 1px solid #F5C4B3;
+      border-radius: 3px;
+      padding: 3px 10px;
+      margin-bottom: 16px;
+    }
+
+    .how-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .how-desc {
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      background: var(--navy);
+      padding: 96px 64px;
+      border-bottom: 1px solid #1E2A40;
+    }
+
+    .features .section-title { color: #D0D8EC; }
+    .features .section-eyebrow { color: #4A5A7A; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: #1E2A40;
+      border: 1px solid #1E2A40;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .feature-item {
+      background: var(--navy-mid);
+      padding: 32px 28px;
+      transition: background .2s;
+    }
+
+    .feature-item:hover { background: var(--navy); }
+
+    .feature-dash {
+      width: 24px;
+      height: 2px;
+      background: var(--vermil);
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #C5CDE0;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 13.5px;
+      color: #4A5A7A;
+      line-height: 1.65;
+    }
+
+    /* ── FOR WHO ── */
+    .forwho {
+      padding: 96px 64px;
+      border-bottom: 1px solid var(--rule);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--rule);
+      border-radius: 0;
+    }
+
+    .forwho-col {
+      background: var(--paper);
+      padding: 56px 48px;
+    }
+
+    .forwho-col:last-child { background: #fff; }
+
+    .forwho-role {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--vermil);
+      margin-bottom: 16px;
+    }
+
+    .forwho-title {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -0.5px;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .forwho-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .forwho-list li {
+      display: flex;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.5;
+    }
+
+    .forwho-list li::before {
+      content: '';
+      width: 3px;
+      height: 3px;
+      background: var(--vermil);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 96px 64px;
+      text-align: center;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .cta-section h2 {
+      font-family: Georgia, serif;
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+
+    .cta-section p {
+      color: var(--ink-mid);
+      font-size: 15.5px;
+      margin-bottom: 36px;
+    }
+
+    .cta-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      padding: 28px 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-word {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-size: 17px;
+      color: #3D4A63;
+    }
+
+    .footer-word span { color: var(--vermil); }
+
+    footer p {
+      font-size: 12px;
+      color: #2A3550;
+    }
+
+    /* ── REGISTER RAIL (decorative, in features) ── */
+    .rail-demo {
+      grid-column: span 3;
+      background: var(--navy-mid);
+      border-top: 1px solid #1E2A40;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rail-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .rail-bar {
+      width: 3px;
+      border-radius: 2px;
+      transition: background .3s;
+    }
+
+    .rail-name {
+      font-size: 9.5px;
+      color: #2A3550;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 48px;
+    }
+
+    .rail-name.paid { color: #4A7A63; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { display: none; }
+      .hero-left { padding: 48px 28px; }
+      .problem-strip { grid-template-columns: 1fr; padding: 32px 28px; }
+      .problem-item { border-right: none; border-bottom: 1px solid #1E2A40; }
+      .how { padding: 56px 28px; }
+      .how-grid { grid-template-columns: 1fr; }
+      .features { padding: 56px 28px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .rail-demo { display: none; }
+      .forwho { grid-template-columns: 1fr; padding: 0; }
+      .forwho-col { padding: 40px 28px; }
+      .cta-section { padding: 56px 28px; }
+      footer { padding: 24px 28px; flex-direction: column; gap: 8px; text-align: center; }
+      nav { padding: 0 20px; }
+      nav ul { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-accent"></div>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="wordmark">Rep<span>Desk</span></a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="./app" class="nav-cta">Open app</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <!-- Left: the argument -->
+    <div class="hero-left">
+      <div class="eyebrow">University payment tracking</div>
+      <h1>The class rep deserves<br>better than<br><em>WhatsApp DMs.</em></h1>
+      <p class="hero-sub">
+        RepDesk replaces the chaos of screenshot collection with a clean dashboard.
+        Students submit in seconds. The rep sees everything in one place.
+        No manual tracking. No fraudulent receipts slipping through.
+      </p>
+      <div class="hero-actions">
+        <a href="./app" class="btn-primary">Open RepDesk &rarr;</a>
+        <a href="#how" class="btn-ghost">See how it works</a>
+      </div>
+    </div>
+
+    <!-- Right: split visual — chaos vs clarity -->
+    <div class="hero-right">
+      <div class="chaos-container">
+        <!-- WhatsApp mock -->
+        <div class="phone-frame" style="position: relative;">
+          <div class="unread-badge">47 unread</div>
+          <div class="phone-screen">
+            <div class="wa-header">
+              <div class="wa-avatar">NS</div>
+              <div>
+                <div class="wa-name">Nursing 200L Class</div>
+                <div class="wa-status">128 participants</div>
+              </div>
+            </div>
+            <div class="wa-body">
+              <div class="bubble bubble-in">
+                <div class="bubble-sender">Fatima Y.</div>
+                <div class="bubble-img">receipt.jpg</div>
+                <div>I have paid o. Please confirm</div>
+                <div class="bubble-time">09:14</div>
+              </div>
+              <div class="bubble bubble-in">
+                <div class="bubble-sender">Ibrahim S.</div>
+                I sent mine yesterday, did you see it?
+                <div class="bubble-time">09:21</div>
+              </div>
+              <div class="bubble bubble-out">
+                <div>Please I'll check later, too many messages</div>
+                <div class="bubble-time">09:34</div>
+              </div>
+              <div class="bubble bubble-in">
+                <div class="bubble-sender">Blessing N.</div>
+                <div class="bubble-img">payment_proof.jpg</div>
+                <div>Here is my own</div>
+                <div class="bubble-time">09:41</div>
+              </div>
+              <div class="bubble bubble-in">
+                <div class="bubble-sender">Amina G.</div>
+                Rep I sent my receipt 3 times already!!
+                <div class="bubble-time">10:02</div>
+              </div>
+              <div class="bubble bubble-in">
+                <div class="bubble-sender">Chukwuemeka O.</div>
+                <div class="bubble-img">screenshot_001.jpg</div>
+                Abeg check am
+                <div class="bubble-time">10:17</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RepDesk card overlay -->
+        <div class="repdesk-card">
+          <div class="repdesk-card-label">RepDesk overview</div>
+          <div class="repdesk-card-stat">72%</div>
+          <div class="repdesk-card-sub">36 of 50 students confirmed</div>
+          <div class="repdesk-card-bar">
+            <div class="repdesk-card-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM STRIP -->
+  <div class="problem-strip">
+    <div class="problem-item">
+      <div class="problem-number">128</div>
+      <div class="problem-label">
+        <strong>Students in one group.</strong> Every receipt comes as a separate message buried inside a chat thread no one can search.
+      </div>
+    </div>
+    <div class="problem-item">
+      <div class="problem-number">0</div>
+      <div class="problem-label">
+        <strong>Automatic verification.</strong> Without RepDesk, the rep manually checks every screenshot one by one against a handwritten list.
+      </div>
+    </div>
+    <div class="problem-item">
+      <div class="problem-number">1 rep.</div>
+      <div class="problem-label">
+        <strong>Doing all of this alone.</strong> Managing DMs, tracking payments, chasing defaulters, spotting fakes. Every semester.
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section class="how" id="how">
+    <div class="section-eyebrow">How it works</div>
+    <h2 class="section-title">Two portals. One problem solved.</h2>
+
+    <div class="how-grid">
+      <div class="how-item">
+        <div class="how-tag">Course Rep</div>
+        <div class="how-title">Create a payment drive</div>
+        <div class="how-desc">
+          Log in with your rep account. Set the drive name, amount, and deadline.
+          Upload your class list — Excel, PDF, Word, or plain text, any format works.
+          The platform registers every name and matric number.
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-tag">Student</div>
+        <div class="how-title">Find your name and submit</div>
+        <div class="how-desc">
+          No account. No login. Students open the portal, find their name in the class list,
+          and either pay directly via Paystack or upload a bank receipt screenshot.
+          The system reads the receipt automatically.
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-tag">System</div>
+        <div class="how-title">Automatic fraud detection</div>
+        <div class="how-desc">
+          Every receipt is scanned on upload. Duplicate reference numbers, wrong amounts,
+          and mismatched dates are flagged instantly without the rep having to check manually.
+          Suspicious submissions go into a review queue.
+        </div>
+      </div>
+      <div class="how-item">
+        <div class="how-tag">Course Rep</div>
+        <div class="how-title">Monitor everything in real time</div>
+        <div class="how-desc">
+          The rep dashboard updates the moment a student submits. See exactly who has paid,
+          who hasn't, and which receipts need a second look. Export the full register
+          when collection is complete.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="section-eyebrow">Features</div>
+    <h2 class="section-title" style="color: #D0D8EC;">Everything the rep needs. Nothing they don't.</h2>
+
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">Secure rep login</div>
+        <div class="feature-desc">Each course rep has their own private account. Their class data, drives, and submissions are completely separate from every other rep on the platform.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">Any file format</div>
+        <div class="feature-desc">Upload your class list as Excel, PDF, Word, CSV, or plain text. Paste it directly if you prefer. The platform parses it and registers every student automatically.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">AI receipt scanning</div>
+        <div class="feature-desc">Students upload a screenshot of their bank receipt. The system extracts the reference number, amount, bank, and date automatically. No manual entry on either side.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">Paystack integration</div>
+        <div class="feature-desc">Students who haven't paid yet can pay directly through a Paystack link. Payment is confirmed automatically — no receipt needed, no verification delay.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">Duplicate detection</div>
+        <div class="feature-desc">If two students submit the same reference number, both are flagged immediately. Amount mismatches are caught the same way. The rep decides how to handle each case.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dash"></div>
+        <div class="feature-title">Works at any university</div>
+        <div class="feature-desc">No school is hardcoded. Any rep at any Nigerian university can create an account, set up their department, and start a drive in under five minutes.</div>
+      </div>
+
+      <!-- Register rail decoration -->
+      <div class="rail-demo" id="rail-demo"></div>
+    </div>
+  </section>
+
+  <!-- FOR WHO -->
+  <section class="forwho">
+    <div class="forwho-col">
+      <div class="forwho-role">Course Rep</div>
+      <h3 class="forwho-title">Stop managing payments through a phone screen.</h3>
+      <ul class="forwho-list">
+        <li>Your own dashboard, protected by login. Nobody else can access your class data.</li>
+        <li>Upload your full class list at once — no entering names one by one.</li>
+        <li>See who has paid and who hasn't, updated in real time as students submit.</li>
+        <li>Flagged receipts are separated for you automatically. Approve or reject with one tap.</li>
+        <li>Works for any type of collection — excursions, handouts, departmental dues.</li>
+      </ul>
+    </div>
+    <div class="forwho-col">
+      <div class="forwho-role">Student</div>
+      <h3 class="forwho-title">Pay once. No follow-up messages needed.</h3>
+      <ul class="forwho-list">
+        <li>No account to create. Find your name in the list and submit in under a minute.</li>
+        <li>Upload your receipt screenshot and the system reads it for you. No typing.</li>
+        <li>Or pay directly through the Paystack link — confirmed automatically.</li>
+        <li>Check your own status anytime. No need to ping the rep to ask if they saw your payment.</li>
+        <li>Your submission is timestamped and recorded. No "I never received it" situations.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>Ready to try it?</h2>
+    <p>Open the platform and see how it works — no setup required to explore.</p>
+    <div class="cta-actions">
+      <a href="./app" class="btn-primary">Open RepDesk &rarr;</a>
+      <a href="#how" class="btn-ghost">How it works</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-word">Rep<span>Desk</span></div>
+    <p>Built for Nigerian university course reps &mdash; works everywhere.</p>
+  </footer>
+
+  <script>
+    // Build the register rail dynamically
+    const names = [
+      "Adebayo", "Fatima", "Ibrahim", "Khadijah", "Oluwaseun",
+      "Amina", "Chukwuemeka", "Blessing", "Mustapha", "Taiwo",
+      "Hauwa", "Emeka", "Sade", "Yusuf", "Ngozi",
+    ];
+    const paidCount = 10; // 10 of 15 paid — 67%
+    const rail = document.getElementById("rail-demo");
+    if (rail) {
+      names.forEach((name, i) => {
+        const paid = i < paidCount;
+        const slot = document.createElement("div");
+        slot.className = "rail-slot";
+        slot.innerHTML = `
+          <div class="rail-bar" style="height:${20 + Math.random()*12}px; background:${paid ? '#1A7A4A' : '#1E2A40'}"></div>
+          <div class="rail-name ${paid ? 'paid' : ''}">${name}</div>
+        `;
+        rail.appendChild(slot);
+      });
+    }
+
+    // Subtle scroll-triggered fade for sections
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = "1";
+          e.target.style.transform = "translateY(0)";
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.how-item, .feature-item, .forwho-col').forEach(el => {
+      el.style.opacity = "0";
+      el.style.transform = "translateY(16px)";
+      el.style.transition = "opacity 0.4s ease, transform 0.4s ease";
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
