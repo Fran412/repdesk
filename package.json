@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.112.4",
+    "@anthropic-ai/sdk": "^0.112.5",
     "@supabase/supabase-js": "^2.110.8",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
