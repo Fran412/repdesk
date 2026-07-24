@@ -29,14 +29,17 @@ exports.handler = async function (event) {
             },
             {
               type: "text",
-              text: `You are reading a Nigerian bank payment receipt or transfer screenshot. Extract these details and return ONLY a JSON object with no explanation, no markdown, no backticks:
+              text: `Look at this Nigerian bank payment receipt image carefully. Extract every number and text you can see.
+
+Return ONLY a valid JSON object, nothing else:
 {
-  "refNo": "the transaction or reference number",
-  "amount": the numeric amount in naira with no commas or symbols,
-  "bank": "the bank name",
-  "date": "the date in YYYY-MM-DD format"
+  "refNo": "transaction or session ID or reference number you can find",
+  "amount": the total amount as a plain number only (e.g. 2100),
+  "bank": "name of the bank",
+  "date": "date in YYYY-MM-DD format"
 }
-If you cannot find a value, use null for that field.`,
+
+If a field is truly not visible, use null. Do not add any explanation or markdown.`,
             },
           ],
         },
