@@ -1,5 +1,3 @@
-const Anthropic = require("@anthropic-ai/sdk");
-
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method not allowed" };
@@ -8,46 +6,47 @@ exports.handler = async function (event) {
   try {
     const { imageBase64, mediaType } = JSON.parse(event.body);
 
-    const client = new Anthropic.default({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      messages: [
-        {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 500,
+        messages: [{
           role: "user",
           content: [
             {
               type: "image",
               source: {
                 type: "base64",
-                media_type: mediaType,
+                media_type: mediaType || "image/jpeg",
                 data: imageBase64,
               },
             },
             {
               type: "text",
-              text: `Look at this Nigerian bank payment receipt image carefully. Extract every number and text you can see.
-
-Return ONLY a valid JSON object, nothing else:
+              text: `Extract from this Nigerian bank receipt and return ONLY valid JSON with no explanation:
 {
-  "refNo": "transaction or session ID or reference number you can find",
-  "amount": the total amount as a plain number only (e.g. 2100),
-  "bank": "name of the bank",
-  "date": "date in YYYY-MM-DD format"
+  "refNo": "the reference or transaction number",
+  "amount": numeric amount only no symbols,
+  "bank": "bank name",
+  "date": "YYYY-MM-DD"
 }
-
-If a field is truly not visible, use null. Do not add any explanation or markdown.`,
+Use null for any field not found.`,
             },
           ],
-        },
-      ],
+        }],
+      }),
     });
 
-    const text = response.content[0].text.trim();
-    const parsed = JSON.parse(text);
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
 
     return {
       statusCode: 200,
