@@ -165,16 +165,10 @@ function Landing({ onSelect }) {
           <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 1,
             background: T.rule, border: `1px solid ${T.rule}`, borderRadius: 6, overflow: "hidden" }}>
             {[
-              { key: "rep",     label: "Course Rep", sub: "Sign in to your dashboard. Manage your class, track payments, review receipts." },
-              { key: "student", label: "Student",    sub: "Submit proof of payment. No account needed." },
+              { key: "rep", label: "Course Rep", sub: "Sign in to your dashboard. Manage your class, track payments, review receipts." },
+              ...(new URLSearchParams(window.location.search).get("rep") ? [{ key: "student", label: "Student", sub: "Submit proof of payment. No account needed." }] : []),
             ].map(p => (
-              <div key={p.key} onClick={() => {
-  if (p.key === "student") {
-    alert("You need the link from your course rep to access the student portal. Ask them to share it with you from their Drive Setup page.");
-    return;
-  }
-  onSelect(p.key);
-}}
+              <div key={p.key} onClick={() => onSelect(p.key)}
                 style={{ background: T.paper, padding: mob ? "24px 20px" : "32px 28px", cursor: "pointer", transition: "background .2s" }}
                 onMouseEnter={e => e.currentTarget.style.background = T.vermilBg}
                 onMouseLeave={e => e.currentTarget.style.background = T.paper}>
@@ -800,7 +794,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
 
   const show = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
- const validate = (data) => {
+  const validate = (data) => {
     if (submissions.map(s=>s.ref_no).includes(data.refNo)) return "Duplicate reference number";
     const expectedAmount = parseFloat(drive.amount);
     const receivedAmount = parseFloat(data.amount);
@@ -809,6 +803,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
     }
     return null;
   };
+
   const scanReceipt = async (file) => {
     setScan(true);
     try {
@@ -816,21 +811,17 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
       reader.onload = async (e) => {
         const base64 = e.target.result.split(",")[1];
         const mediaType = file.type || "image/jpeg";
-
         const res = await fetch("/.netlify/functions/scan-receipt", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageBase64: base64, mediaType }),
         });
-
         const data = await res.json();
-
         if (data.error) {
           show("Could not read receipt. Please try a clearer image.", "error");
           setScan(false);
           return;
         }
-
         setScnd({
           refNo:  data.refNo  || "UNKNOWN",
           amount: data.amount || 0,
