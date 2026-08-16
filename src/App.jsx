@@ -794,12 +794,15 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
 
   const show = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
-  const validate = (data) => {
+ const validate = (data) => {
     if (submissions.map(s=>s.ref_no).includes(data.refNo)) return "Duplicate reference number";
-    if (drive.amount && data.amount !== drive.amount) return `Amount mismatch — expected ${fmt(drive.amount)}, found ${fmt(data.amount)}`;
+    const expectedAmount = parseFloat(drive.amount);
+    const receivedAmount = parseFloat(data.amount);
+    if (expectedAmount && receivedAmount && receivedAmount !== expectedAmount) {
+      return `Amount mismatch — expected ${fmt(expectedAmount)}, found ${fmt(receivedAmount)}`;
+    }
     return null;
   };
-
   const scanReceipt = async (file) => {
     setScan(true);
     try {
