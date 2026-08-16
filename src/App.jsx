@@ -168,7 +168,13 @@ function Landing({ onSelect }) {
               { key: "rep",     label: "Course Rep", sub: "Sign in to your dashboard. Manage your class, track payments, review receipts." },
               { key: "student", label: "Student",    sub: "Submit proof of payment. No account needed." },
             ].map(p => (
-              <div key={p.key} onClick={() => onSelect(p.key)}
+              <div key={p.key} onClick={() => {
+  if (p.key === "student") {
+    alert("You need the link from your course rep to access the student portal. Ask them to share it with you from their Drive Setup page.");
+    return;
+  }
+  onSelect(p.key);
+}}
                 style={{ background: T.paper, padding: mob ? "24px 20px" : "32px 28px", cursor: "pointer", transition: "background .2s" }}
                 onMouseEnter={e => e.currentTarget.style.background = T.vermilBg}
                 onMouseLeave={e => e.currentTarget.style.background = T.paper}>
