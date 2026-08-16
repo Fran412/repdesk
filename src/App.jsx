@@ -790,6 +790,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
   const [scanned, setScnd]  = useState(null);
   const [saving,  setSaving]= useState(false);
   const [toast,   setToast] = useState(null);
+  const [search,  setSearch]= useState("");
   const fileRef = useRef();
 
   const show = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
@@ -889,32 +890,55 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         <h2 style={{ fontFamily: F.display, fontSize: mob ? 26 : 32, fontWeight: 400, margin: "0 0 8px", letterSpacing: "-0.5px" }}>Find your name</h2>
         <p style={{ color: T.inkMid, fontSize: 14, margin: 0, lineHeight: 1.6 }}>Select your name from the class list. No account or login required.</p>
       </div>
+
+      {students.length > 0 && (
+        <input
+          style={{ ...inp, marginBottom: 14 }}
+          placeholder="Search your name..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onFocus={e => e.target.style.borderColor = T.vermil}
+          onBlur={e => e.target.style.borderColor = T.rule}
+        />
+      )}
+
       {students.length===0
         ? <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: "36px 20px", textAlign: "center", color: T.inkFaint, background: "#fff" }}>
             Your course rep has not added the class list yet.
           </div>
-        : <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, overflow: "hidden" }}>
-            {students.map((st,i) => {
-              const sub = submissions.find(s=>s.matric===st.matric);
-              return (
-                <div key={st.id}
-                  onClick={() => { if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: mob ? "14px 14px" : "14px 18px",
-                    borderBottom: i<students.length-1 ? `1px solid ${T.rule}` : "none",
-                    background: i%2===0 ? "#fff" : T.paper,
-                    cursor: sub&&sub.status==="verified" ? "default" : "pointer", transition: "background .15s" }}
-                  onMouseEnter={e => { if (!sub||sub.status!=="verified") e.currentTarget.style.background=T.vermilBg; }}
-                  onMouseLeave={e => { e.currentTarget.style.background=i%2===0?"#fff":T.paper; }}>
-                  <div>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{st.name}</div>
-                    {st.matric && <div style={{ fontFamily: F.mono, fontSize: 11.5, color: T.inkFaint, marginTop: 2 }}>{st.matric}</div>}
-                  </div>
-                  {sub ? <Chip status={sub.status} /> : <span style={{ fontSize: 12.5, color: T.inkFaint, whiteSpace: "nowrap" }}>Select &rarr;</span>}
+        : (() => {
+            const filtered = students.filter(st =>
+              st.name.toLowerCase().includes(search.toLowerCase()) ||
+              (st.matric && st.matric.toLowerCase().includes(search.toLowerCase()))
+            );
+            return filtered.length === 0
+              ? <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: "28px 20px",
+                  textAlign: "center", color: T.inkFaint, background: "#fff", fontSize: 14 }}>
+                  No results for "{search}"
                 </div>
-              );
-            })}
-          </div>
+              : <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, overflow: "hidden" }}>
+                  {filtered.map((st,i) => {
+                    const sub = submissions.find(s=>s.matric===st.matric);
+                    return (
+                      <div key={st.id}
+                        onClick={() => { if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: mob ? "14px 14px" : "14px 18px",
+                          borderBottom: i<filtered.length-1 ? `1px solid ${T.rule}` : "none",
+                          background: i%2===0 ? "#fff" : T.paper,
+                          cursor: sub&&sub.status==="verified" ? "default" : "pointer", transition: "background .15s" }}
+                        onMouseEnter={e => { if (!sub||sub.status!=="verified") e.currentTarget.style.background=T.vermilBg; }}
+                        onMouseLeave={e => { e.currentTarget.style.background=i%2===0?"#fff":T.paper; }}>
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: 14 }}>{st.name}</div>
+                          {st.matric && <div style={{ fontFamily: F.mono, fontSize: 11.5, color: T.inkFaint, marginTop: 2 }}>{st.matric}</div>}
+                        </div>
+                        {sub ? <Chip status={sub.status} /> : <span style={{ fontSize: 12.5, color: T.inkFaint, whiteSpace: "nowrap" }}>Select &rarr;</span>}
+                      </div>
+                    );
+                  })}
+                </div>;
+          })()
       }
     </Wrap>
   );
