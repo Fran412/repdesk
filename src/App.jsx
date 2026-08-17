@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabase";
+import * as XLSX from "xlsx";
 
 const T = {
   paper:    "#F5F4F0",
@@ -275,7 +276,7 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
   const [toast, setToast] = useState(null);
   const show = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3200); };
 
-  const drive = { name: rep.drive_name || "", amount: rep.drive_amount || 0, deadline: rep.drive_deadline || "" };
+  const drive = { name: rep.drive_name || "", amount: rep.drive_amount || 0, deadline: rep.drive_deadline || "", closed: rep.drive_closed || false };
 
   const verified = submissions.filter(s => s.status === "verified");
   const flagged  = submissions.filter(s => s.status === "flagged");
@@ -292,6 +293,19 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
     await supabase.from("submissions").delete().eq("id", id);
     setSubmissions(p => p.filter(s => s.id!==id));
     show("Submission rejected.", "warn");
+  };
+
+  const exportToExcel = () => {
+    const paidRows = verified.map(s => ({
+      Name: s.name, Matric: s.matric, Reference: s.ref_no,
+      Amount: s.amount, Bank: s.bank, Date: s.date,
+    }));
+    const unpaidRows = unpaid.map(s => ({ Name: s.name, Matric: s.matric }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paidRows),   "Paid");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(unpaidRows), "Unpaid");
+    XLSX.writeFile(wb, `${drive.name || "RepDesk"}-export.xlsx`);
+    show("Export downloaded.");
   };
 
   return (
@@ -338,6 +352,7 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
           <NavItem label="Class List"  active={tab==="classlist"}   onClick={() => setTab("classlist")}  count={students.length} />
           <NavItem label="Flagged"     active={tab==="flags"}       onClick={() => setTab("flags")}       count={flagged.length} />
           <NavItem label="Drive Setup" active={tab==="drive"}       onClick={() => setTab("drive")} />
+          <NavItem label="Export"      active={tab==="export"}      onClick={() => setTab("export")} />
         </div>
         {loading
           ? <div style={{ textAlign: "center", padding: "60px 0", color: T.inkFaint }}>Loading...</div>
@@ -347,6 +362,7 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
               {tab==="classlist"   && <RepClassList rep={rep} students={students} setStudents={setStudents} paidSet={paidSet} show={show} mob={mob} />}
               {tab==="flags"       && <RepFlags flagged={flagged} onApprove={approve} onReject={reject} />}
               {tab==="drive"       && <DriveSetup rep={rep} setRep={setRep} show={show} />}
+              {tab==="export"      && <ExportTab verified={verified} unpaid={unpaid} drive={drive} onExport={exportToExcel} rep={rep} setRep={setRep} show={show} submissions={submissions} />}
             </>
         }
       </div>
@@ -437,6 +453,68 @@ function DriveSetup({ rep, setRep, show }) {
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
+// ── EXPORT TAB ────────────────────────────────────────────────────────────────
+function ExportTab({ verified, unpaid, drive, onExport, rep, setRep, show, submissions }) {
+  const [closing, setClosing] = useState(false);
+
+  const closeDrive = async () => {
+    if (!window.confirm("Close this drive? Students will no longer be able to submit payments.")) return;
+    setClosing(true);
+    const { error } = await supabase.from("reps").update({ drive_closed: true }).eq("id", rep.id);
+    if (!error) { setRep(r => ({ ...r, drive_closed: true })); show("Drive closed. No more submissions accepted."); }
+    else show(error.message, "error");
+    setClosing(false);
+  };
+
+  const reopenDrive = async () => {
+    const { error } = await supabase.from("reps").update({ drive_closed: false }).eq("id", rep.id);
+    if (!error) { setRep(r => ({ ...r, drive_closed: false })); show("Drive reopened."); }
+    else show(error.message, "error");
+  };
+
+  return (
+    <div style={{ maxWidth: 560, display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Export */}
+      <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Export register</div>
+        <p style={{ color: T.inkMid, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+          Download an Excel file with two sheets — Paid and Unpaid. Share with your lecturer or HOD.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1,
+          background: T.rule, borderRadius: 6, overflow: "hidden", marginBottom: 20 }}>
+          {[
+            { label: "Paid", val: verified.length, color: T.pass },
+            { label: "Unpaid", val: unpaid.length, color: T.warn },
+            { label: "Total", val: verified.length + unpaid.length, color: T.ink },
+          ].map(s => (
+            <div key={s.label} style={{ background: T.paper, padding: "16px 20px" }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: s.color, fontFamily: F.display }}>{s.val}</div>
+              <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <PrimaryBtn onClick={onExport} style={{ width: "100%" }}>Download Excel file</PrimaryBtn>
+      </div>
+
+      {/* Close / reopen drive */}
+      <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Drive status</div>
+        <p style={{ color: T.inkMid, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+          {rep.drive_closed
+            ? "This drive is closed. Students cannot submit payments."
+            : "This drive is open. Students can still submit payments."}
+        </p>
+        {rep.drive_closed
+          ? <GhostBtn onClick={reopenDrive} style={{ width: "100%" }}>Reopen drive</GhostBtn>
+          : <DangerBtn onClick={closeDrive} disabled={closing} style={{ width: "100%", padding: "11px 24px", fontSize: 13.5 }}>
+              {closing ? "Closing..." : "Close drive"}
+            </DangerBtn>
+        }
+      </div>
+    </div>
+  );
+}
+
 function RepOverview({ verified, flagged, unpaid, students, drive, mob }) {
   const pct = students.length ? Math.round((verified.length / students.length) * 100) : 0;
   return (
@@ -891,7 +969,14 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         <p style={{ color: T.inkMid, fontSize: 14, margin: 0, lineHeight: 1.6 }}>Select your name from the class list. No account or login required.</p>
       </div>
 
-      {students.length > 0 && (
+      {drive.closed && (
+        <div style={{ background: T.failBg, border: `1px solid #F0B8B3`, borderRadius: 4,
+          padding: "12px 16px", marginBottom: 16, fontSize: 13.5, color: T.fail }}>
+          This payment drive has been closed by the course rep. No more submissions are being accepted.
+        </div>
+      )}
+
+      {!drive.closed && students.length > 0 && (
         <input
           style={{ ...inp, marginBottom: 14 }}
           placeholder="Search your name..."
@@ -921,7 +1006,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
                     const sub = submissions.find(s=>s.matric===st.matric);
                     return (
                       <div key={st.id}
-                        onClick={() => { if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
+                        onClick={() => { if (drive.closed) return; if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
                         style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
                           padding: mob ? "14px 14px" : "14px 18px",
                           borderBottom: i<filtered.length-1 ? `1px solid ${T.rule}` : "none",
@@ -1055,29 +1140,20 @@ function StudentPublicPortal({ onBack }) {
   const [students,    setStudents]    = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [repId,       setRepId]       = useState(null);
-  const [drive,       setDrive]       = useState({ name: "", amount: 0, deadline: "" });
+  const [drive,       setDrive]       = useState({ name: "", amount: 0, deadline: "", closed: false });
   const [notFound,    setNotFound]    = useState(false);
 
   useEffect(() => {
-    // Read rep ID from URL — e.g. ?rep=abc123
     const params = new URLSearchParams(window.location.search);
     const rid = params.get("rep");
-
     if (!rid) { setNotFound(true); return; }
-
     setRepId(rid);
-
-    // Load only this rep's students
     supabase.from("students").select("*").eq("rep_id", rid).order("name")
       .then(({ data }) => setStudents(data || []));
-
-    // Load this rep's drive info
-    supabase.from("reps").select("drive_name, drive_amount, drive_deadline").eq("id", rid).single()
+    supabase.from("reps").select("drive_name, drive_amount, drive_deadline, drive_closed").eq("id", rid).single()
       .then(({ data: r }) => {
-        if (r) setDrive({ name: r.drive_name||"", amount: r.drive_amount||0, deadline: r.drive_deadline||"" });
+        if (r) setDrive({ name: r.drive_name||"", amount: r.drive_amount||0, deadline: r.drive_deadline||"", closed: r.drive_closed||false });
       });
-
-    // Load only this rep's submissions (for status checking)
     supabase.from("submissions").select("*").eq("rep_id", rid)
       .then(({ data }) => setSubmissions(data || []));
   }, []);
