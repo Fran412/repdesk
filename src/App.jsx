@@ -40,12 +40,10 @@ function useIsMobile() {
 }
 
 function parseBulk(text) {
-  return text.trim().split("\n").filter(Boolean).map((line, i) => {
+  return text.trim().split("\n").filter(Boolean).map((line) => {
     const clean = line.replace(/^\d+[\.\)\-\s]+/, "").trim();
     const parts = clean.split(/[\t,|;]+/).map(s => s.trim()).filter(Boolean);
-    return parts.length >= 2
-      ? { name: parts[0], matric: parts[1] }
-      : { name: parts[0]||clean, matric: "" };
+    return parts.length >= 2 ? { name: parts[0], matric: parts[1] } : { name: parts[0]||clean, matric: "" };
   }).filter(r => r.name);
 }
 
@@ -56,31 +54,25 @@ const Chip = ({ status }) => {
     pending:  { bg: T.warnBg, color: T.warn,  border: "#E8CFA0", label: "Unpaid" },
   };
   const s = map[status] || map.pending;
-  return (
-    <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-      padding: "2px 10px", borderRadius: 3, fontSize: 11, fontWeight: 700,
-      fontFamily: F.body, letterSpacing: "0.05em", textTransform: "uppercase" }}>{s.label}</span>
-  );
+  return <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+    padding: "2px 10px", borderRadius: 3, fontSize: 11, fontWeight: 700,
+    fontFamily: F.body, letterSpacing: "0.05em", textTransform: "uppercase" }}>{s.label}</span>;
 };
 
 const PrimaryBtn = ({ children, style, disabled, ...p }) => (
-  <button disabled={disabled} style={{
-    background: disabled ? T.ruleHard : T.vermil, color: "#fff", border: "none",
+  <button disabled={disabled} style={{ background: disabled ? T.ruleHard : T.vermil, color: "#fff", border: "none",
     padding: "11px 24px", borderRadius: 4, cursor: disabled ? "not-allowed" : "pointer",
-    fontFamily: F.body, fontWeight: 700, fontSize: 13.5,
-    transition: "background .15s", opacity: disabled ? 0.6 : 1, ...style,
-  }} {...p}>{children}</button>
+    fontFamily: F.body, fontWeight: 700, fontSize: 13.5, transition: "background .15s",
+    opacity: disabled ? 0.6 : 1, ...style }} {...p}>{children}</button>
 );
 
 const GhostBtn = ({ children, style, ...p }) => (
-  <button style={{
-    background: "transparent", color: T.inkMid, border: `1px solid ${T.rule}`,
+  <button style={{ background: "transparent", color: T.inkMid, border: `1px solid ${T.rule}`,
     padding: "10px 20px", borderRadius: 4, cursor: "pointer", fontFamily: F.body,
-    fontWeight: 600, fontSize: 13.5, ...style,
-  }} {...p}>{children}</button>
+    fontWeight: 600, fontSize: 13.5, ...style }} {...p}>{children}</button>
 );
 
-const DangerBtn  = ({ children, style, ...p }) => (
+const DangerBtn = ({ children, style, ...p }) => (
   <button style={{ background: T.failBg, color: T.fail, border: `1px solid #F0B8B3`,
     padding: "8px 16px", borderRadius: 4, cursor: "pointer", fontFamily: F.body,
     fontWeight: 700, fontSize: 12.5, ...style }} {...p}>{children}</button>
@@ -102,24 +94,20 @@ const Input = ({ label, ...p }) => (
   <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
     {label && <label style={{ fontSize: 11.5, fontFamily: F.body, fontWeight: 700,
       color: T.inkFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>}
-    <input style={inp}
-      onFocus={e => e.target.style.borderColor = T.vermil}
-      onBlur={e => e.target.style.borderColor = T.rule}
-      {...p} />
+    <input style={inp} onFocus={e => e.target.style.borderColor = T.vermil}
+      onBlur={e => e.target.style.borderColor = T.rule} {...p} />
   </div>
 );
 
 function Toast({ msg, type, onDone }) {
   const colors = { success: T.pass, error: T.fail, warn: T.warn, info: T.inkMid };
   return (
-    <div style={{
-      position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
       background: T.navy, color: T.paper, padding: "13px 22px", borderRadius: 4,
       fontSize: 13.5, fontFamily: F.body, zIndex: 999, display: "flex",
       alignItems: "center", gap: 12, minWidth: 260, maxWidth: "90vw",
       boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
-      borderLeft: `4px solid ${colors[type] || T.vermil}`,
-    }}>
+      borderLeft: `4px solid ${colors[type] || T.vermil}` }}>
       <span style={{ flex: 1 }}>{msg}</span>
       <button onClick={onDone} style={{ background: "none", border: "none",
         color: T.inkFaint, cursor: "pointer", fontSize: 18 }}>x</button>
@@ -128,14 +116,12 @@ function Toast({ msg, type, onDone }) {
 }
 
 const NavItem = ({ label, active, count, onClick }) => (
-  <button onClick={onClick} style={{
-    background: "none", border: "none", cursor: "pointer", padding: "0 0 12px",
-    fontFamily: F.body, fontSize: 13, fontWeight: active ? 700 : 500,
+  <button onClick={onClick} style={{ background: "none", border: "none", cursor: "pointer",
+    padding: "0 0 12px", fontFamily: F.body, fontSize: 13, fontWeight: active ? 700 : 500,
     color: active ? T.vermil : T.inkFaint,
     borderBottom: active ? `2px solid ${T.vermil}` : "2px solid transparent",
-    transition: "color .15s", display: "flex", alignItems: "center", gap: 6, marginRight: 20,
-    whiteSpace: "nowrap",
-  }}>
+    transition: "color .15s", display: "flex", alignItems: "center", gap: 6,
+    marginRight: 20, whiteSpace: "nowrap" }}>
     {label}
     {count !== undefined && (
       <span style={{ background: active ? T.vermil : T.rule, color: active ? "#fff" : T.inkFaint,
@@ -144,9 +130,10 @@ const NavItem = ({ label, active, count, onClick }) => (
   </button>
 );
 
-// ── LANDING ──────────────────────────────────────────────────────────────────
+// ── LANDING ────────────────────────────────────────────────────────────────────
 function Landing({ onSelect }) {
   const mob = useIsMobile();
+  const hasRep = new URLSearchParams(window.location.search).get("rep");
   return (
     <div style={{ minHeight: "100vh", background: T.paper, fontFamily: F.body, color: T.ink, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 3, background: T.vermil }} />
@@ -163,11 +150,11 @@ function Landing({ onSelect }) {
               No more WhatsApp chaos. No more chasing people. Works for any university, any department.
             </p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 1,
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : hasRep ? "1fr 1fr" : "1fr", gap: 1,
             background: T.rule, border: `1px solid ${T.rule}`, borderRadius: 6, overflow: "hidden" }}>
             {[
               { key: "rep", label: "Course Rep", sub: "Sign in to your dashboard. Manage your class, track payments, review receipts." },
-              ...(new URLSearchParams(window.location.search).get("rep") ? [{ key: "student", label: "Student", sub: "Submit proof of payment. No account needed." }] : []),
+              ...(hasRep ? [{ key: "student", label: "Student", sub: "Submit proof of payment. No account needed." }] : []),
             ].map(p => (
               <div key={p.key} onClick={() => onSelect(p.key)}
                 style={{ background: T.paper, padding: mob ? "24px 20px" : "32px 28px", cursor: "pointer", transition: "background .2s" }}
@@ -190,7 +177,7 @@ function Landing({ onSelect }) {
   );
 }
 
-// ── REP AUTH ─────────────────────────────────────────────────────────────────
+// ── REP AUTH ──────────────────────────────────────────────────────────────────
 function RepAuth({ onBack, onLogin }) {
   const mob = useIsMobile();
   const [mode,    setMode]  = useState("login");
@@ -270,13 +257,48 @@ function RepAuth({ onBack, onLogin }) {
 }
 
 // ── REP DASHBOARD ─────────────────────────────────────────────────────────────
-function RepDashboard({ rep, setRep, onLogout, students, setStudents, submissions, setSubmissions, loading }) {
+function RepDashboard({ rep, setRep, onLogout }) {
   const mob = useIsMobile();
-  const [tab,   setTab]   = useState("overview");
-  const [toast, setToast] = useState(null);
+  const [drives,      setDrives]      = useState([]);
+  const [activeDrive, setActiveDrive] = useState(null);
+  const [students,    setStudents]    = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingD,    setLoadingD]    = useState(true);
+  const [loadingS,    setLoadingS]    = useState(false);
+  const [tab,         setTab]         = useState("overview");
+  const [toast,       setToast]       = useState(null);
   const show = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3200); };
 
-  const drive = { name: rep.drive_name || "", amount: rep.drive_amount || 0, deadline: rep.drive_deadline || "", closed: rep.drive_closed || false };
+  // Load all drives for this rep
+  useEffect(() => {
+    supabase.from("drives").select("*").eq("rep_id", rep.id).order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setDrives(data || []);
+        if (data?.length) setActiveDrive(data[0]);
+        setLoadingD(false);
+      });
+  }, [rep.id]);
+
+  // Load students and submissions when active drive changes
+  useEffect(() => {
+    if (!activeDrive) return;
+    setLoadingS(true);
+    Promise.all([
+      supabase.from("students").select("*").eq("drive_id", activeDrive.id).order("name"),
+      supabase.from("submissions").select("*").eq("drive_id", activeDrive.id).order("created_at", { ascending: false }),
+    ]).then(([{ data: s }, { data: sub }]) => {
+      setStudents(s || []);
+      setSubmissions(sub || []);
+      setLoadingS(false);
+    });
+
+    const channel = supabase.channel("subs-" + activeDrive.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "submissions",
+        filter: `drive_id=eq.${activeDrive.id}` },
+        payload => setSubmissions(p => [payload.new, ...p])
+      ).subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [activeDrive?.id]);
 
   const verified = submissions.filter(s => s.status === "verified");
   const flagged  = submissions.filter(s => s.status === "flagged");
@@ -296,21 +318,50 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
   };
 
   const exportToExcel = () => {
-    const paidRows = verified.map(s => ({
-      Name: s.name, Matric: s.matric, Reference: s.ref_no,
-      Amount: s.amount, Bank: s.bank, Date: s.date,
-    }));
+    const paidRows   = verified.map(s => ({ Name: s.name, Matric: s.matric, Reference: s.ref_no, Amount: s.amount, Bank: s.bank, Date: s.date }));
     const unpaidRows = unpaid.map(s => ({ Name: s.name, Matric: s.matric }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paidRows),   "Paid");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(unpaidRows), "Unpaid");
-    XLSX.writeFile(wb, `${drive.name || "RepDesk"}-export.xlsx`);
+    XLSX.writeFile(wb, `${activeDrive?.name || "RepDesk"}-export.xlsx`);
     show("Export downloaded.");
   };
+
+  const updateDrive = (updated) => {
+    setActiveDrive(updated);
+    setDrives(p => p.map(d => d.id === updated.id ? updated : d));
+  };
+
+  if (loadingD) return (
+    <div style={{ minHeight: "100vh", background: T.paper, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.body, color: T.inkFaint }}>
+      Loading...
+    </div>
+  );
+
+  // No drives yet — show drive creation first
+  if (!drives.length) return (
+    <div style={{ minHeight: "100vh", background: T.paper, fontFamily: F.body, color: T.ink }}>
+      <div style={{ height: 3, background: T.vermil }} />
+      <div style={{ background: "#fff", borderBottom: `1px solid ${T.rule}`, padding: "0 24px", height: 52,
+        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontFamily: F.display, fontSize: 18, fontStyle: "italic" }}>Rep<span style={{ color: T.vermil }}>Desk</span></span>
+        <GhostBtn style={{ padding: "5px 12px", fontSize: 12 }} onClick={onLogout}>Sign out</GhostBtn>
+      </div>
+      <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 20px" }}>
+        <div style={{ fontFamily: F.display, fontSize: 28, marginBottom: 8 }}>Welcome, {rep.name.split(" ")[0]}.</div>
+        <p style={{ color: T.inkMid, fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
+          You don't have any payment drives yet. Create your first one to get started.
+        </p>
+        <CreateDriveForm repId={rep.id} onCreated={d => { setDrives([d]); setActiveDrive(d); }} show={show} />
+      </div>
+      {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: T.paper, fontFamily: F.body, color: T.ink }}>
       <div style={{ height: 3, background: T.vermil }} />
+      {/* Top bar */}
       <div style={{ background: "#fff", borderBottom: `1px solid ${T.rule}`,
         padding: mob ? "0 16px" : "0 32px", height: 52,
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -326,43 +377,67 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
         </div>
       </div>
 
-      {drive.name ? (
-        <div style={{ background: T.navy, padding: mob ? "9px 16px" : "10px 32px",
-          display: "flex", alignItems: "center", gap: 8, fontSize: 12, flexWrap: "wrap" }}>
-          <span style={{ color: T.vermil, fontWeight: 700, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase" }}>Active Drive</span>
-          <span style={{ color: "#4A5568" }}>—</span>
-          <span style={{ color: T.paper }}>{drive.name}</span>
-          <span style={{ color: "#4A5568" }}>/</span>
-          <span style={{ color: T.vermil, fontWeight: 700 }}>{fmt(drive.amount)}</span>
-          {drive.deadline && <><span style={{ color: "#4A5568" }}>/</span>
-          <span style={{ color: "#6B7280" }}>Due {drive.deadline}</span></>}
-        </div>
-      ) : (
-        <div style={{ background: T.warnBg, borderBottom: `1px solid #E8CFA0`,
-          padding: mob ? "9px 16px" : "9px 32px", fontSize: 13, color: T.warn }}>
-          No active drive set. Go to <strong>Drive Setup</strong> to create one.
-        </div>
-      )}
+      {/* Drive selector bar */}
+      <div style={{ background: T.navy, padding: mob ? "0 16px" : "0 32px",
+        display: "flex", alignItems: "center", gap: 0, overflowX: "auto", minHeight: 44 }}>
+        {drives.map(d => (
+          <button key={d.id} onClick={() => { setActiveDrive(d); setTab("overview"); }}
+            style={{ background: activeDrive?.id===d.id ? T.vermil : "transparent",
+              color: activeDrive?.id===d.id ? "#fff" : "#6B7280",
+              border: "none", padding: "10px 16px", cursor: "pointer", fontFamily: F.body,
+              fontSize: 12.5, fontWeight: activeDrive?.id===d.id ? 700 : 500,
+              whiteSpace: "nowrap", transition: "background .15s" }}>
+            {d.name}
+            {d.closed && <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.7 }}>(closed)</span>}
+          </button>
+        ))}
+        <button onClick={() => setTab("newdrive")}
+          style={{ background: "transparent", color: "#4A5568", border: "none",
+            padding: "10px 16px", cursor: "pointer", fontFamily: F.body, fontSize: 12.5,
+            whiteSpace: "nowrap" }}>
+          + New drive
+        </button>
+      </div>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: mob ? "0 12px" : "0 32px" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", borderBottom: `1px solid ${T.rule}`,
-          paddingTop: 20, marginBottom: 24, overflowX: "auto" }}>
-          <NavItem label="Overview"    active={tab==="overview"}    onClick={() => setTab("overview")} />
-          <NavItem label="Submissions" active={tab==="submissions"} onClick={() => setTab("submissions")} count={submissions.length} />
-          <NavItem label="Class List"  active={tab==="classlist"}   onClick={() => setTab("classlist")}  count={students.length} />
-          <NavItem label="Flagged"     active={tab==="flags"}       onClick={() => setTab("flags")}       count={flagged.length} />
-          <NavItem label="Drive Setup" active={tab==="drive"}       onClick={() => setTab("drive")} />
-          <NavItem label="Export"      active={tab==="export"}      onClick={() => setTab("export")} />
-        </div>
-        {loading
+        {tab !== "newdrive" && (
+          <div style={{ display: "flex", alignItems: "flex-end", borderBottom: `1px solid ${T.rule}`,
+            paddingTop: 20, marginBottom: 24, overflowX: "auto" }}>
+            <NavItem label="Overview"    active={tab==="overview"}    onClick={() => setTab("overview")} />
+            <NavItem label="Submissions" active={tab==="submissions"} onClick={() => setTab("submissions")} count={submissions.length} />
+            <NavItem label="Class List"  active={tab==="classlist"}   onClick={() => setTab("classlist")}  count={students.length} />
+            <NavItem label="Flagged"     active={tab==="flags"}       onClick={() => setTab("flags")}       count={flagged.length} />
+            <NavItem label="Drive Setup" active={tab==="drive"}       onClick={() => setTab("drive")} />
+            <NavItem label="Export"      active={tab==="export"}      onClick={() => setTab("export")} />
+          </div>
+        )}
+
+        {tab === "newdrive" && (
+          <div style={{ maxWidth: 480, paddingTop: 32 }}>
+            <button onClick={() => setTab("overview")} style={{ background: "none", border: "none",
+              color: T.inkFaint, cursor: "pointer", fontSize: 13, fontFamily: F.body,
+              padding: 0, marginBottom: 24 }}>&larr; Back</button>
+            <div style={{ fontFamily: F.display, fontSize: 24, marginBottom: 8 }}>New payment drive</div>
+            <p style={{ color: T.inkMid, fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+              Each drive has its own class list, student link, and submissions.
+            </p>
+            <CreateDriveForm repId={rep.id} onCreated={d => {
+              setDrives(p => [d, ...p]); setActiveDrive(d);
+              setStudents([]); setSubmissions([]); setTab("overview");
+              show("New drive created.");
+            }} show={show} />
+          </div>
+        )}
+
+        {loadingS && tab !== "newdrive"
           ? <div style={{ textAlign: "center", padding: "60px 0", color: T.inkFaint }}>Loading...</div>
           : <>
-              {tab==="overview"    && <RepOverview verified={verified} flagged={flagged} unpaid={unpaid} students={students} drive={drive} mob={mob} />}
+              {tab==="overview"    && <RepOverview verified={verified} flagged={flagged} unpaid={unpaid} students={students} drive={activeDrive} mob={mob} />}
               {tab==="submissions" && <RepSubmissions submissions={submissions} onApprove={approve} onReject={reject} mob={mob} />}
-              {tab==="classlist"   && <RepClassList rep={rep} students={students} setStudents={setStudents} paidSet={paidSet} show={show} mob={mob} />}
+              {tab==="classlist"   && <RepClassList repId={rep.id} driveId={activeDrive?.id} students={students} setStudents={setStudents} paidSet={paidSet} show={show} mob={mob} />}
               {tab==="flags"       && <RepFlags flagged={flagged} onApprove={approve} onReject={reject} />}
-              {tab==="drive"       && <DriveSetup rep={rep} setRep={setRep} show={show} />}
-              {tab==="export"      && <ExportTab verified={verified} unpaid={unpaid} drive={drive} onExport={exportToExcel} rep={rep} setRep={setRep} show={show} submissions={submissions} />}
+              {tab==="drive"       && <DriveSetup drive={activeDrive} repId={rep.id} onUpdated={updateDrive} show={show} rep={rep} setRep={setRep} />}
+              {tab==="export"      && <ExportTab verified={verified} unpaid={unpaid} drive={activeDrive} onExport={exportToExcel} onUpdated={updateDrive} show={show} />}
             </>
         }
       </div>
@@ -371,110 +446,126 @@ function RepDashboard({ rep, setRep, onLogout, students, setStudents, submission
   );
 }
 
-// ── DRIVE SETUP ───────────────────────────────────────────────────────────────
-function DriveSetup({ rep, setRep, show }) {
-  const [name,     setName]     = useState(rep.drive_name || "");
-  const [amount,   setAmount]   = useState(rep.drive_amount || "");
-  const [deadline, setDeadline] = useState(rep.drive_deadline || "");
+// ── CREATE DRIVE FORM ─────────────────────────────────────────────────────────
+function CreateDriveForm({ repId, onCreated, show }) {
+  const [name,     setName]     = useState("");
+  const [amount,   setAmount]   = useState("");
+  const [deadline, setDeadline] = useState("");
   const [saving,   setSaving]   = useState(false);
 
-  const save = async () => {
+  const create = async () => {
     if (!name.trim() || !amount) { show("Fill in drive name and amount.", "warn"); return; }
     setSaving(true);
-    const { error } = await supabase.from("reps").update({
-      drive_name: name.trim(),
-      drive_amount: parseFloat(amount),
-      drive_deadline: deadline,
-    }).eq("id", rep.id);
-    if (!error) {
-      setRep(r => ({ ...r, drive_name: name.trim(), drive_amount: parseFloat(amount), drive_deadline: deadline }));
-      show("Drive updated successfully.");
-    } else show(error.message, "error");
+    const { data, error } = await supabase.from("drives").insert({
+      rep_id: repId, name: name.trim(), amount: parseFloat(amount), deadline,
+    }).select().single();
+    if (!error) { onCreated(data); }
+    else show(error.message, "error");
     setSaving(false);
   };
 
   return (
-    <div style={{ maxWidth: 480 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-        textTransform: "uppercase", color: T.inkFaint, marginBottom: 6 }}>Drive Setup</div>
-      <p style={{ color: T.inkMid, fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-        Set the name, amount, and deadline for the current payment collection. This is what students will see when they submit.
-      </p>
+    <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff",
+      display: "flex", flexDirection: "column", gap: 16 }}>
+      <Input label="Payment purpose" placeholder="e.g. Departmental Excursion Levy" value={name} onChange={e => setName(e.target.value)} />
+      <Input label="Amount (NGN)" type="number" placeholder="e.g. 5000" value={amount} onChange={e => setAmount(e.target.value)} />
+      <Input label="Deadline (optional)" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+      <PrimaryBtn onClick={create} disabled={saving}>{saving ? "Creating..." : "Create drive"}</PrimaryBtn>
+    </div>
+  );
+}
+
+// ── DRIVE SETUP ───────────────────────────────────────────────────────────────
+function DriveSetup({ drive, repId, onUpdated, show, rep, setRep }) {
+  const [name,     setName]     = useState(drive?.name || "");
+  const [amount,   setAmount]   = useState(drive?.amount || "");
+  const [deadline, setDeadline] = useState(drive?.deadline || "");
+  const [accName,  setAccName]  = useState(rep?.account_name || "");
+  const [accNum,   setAccNum]   = useState(rep?.account_number || "");
+  const [bankName, setBankName] = useState(rep?.bank_name || "");
+  const [saving,   setSaving]   = useState(false);
+
+  useEffect(() => {
+    setName(drive?.name || "");
+    setAmount(drive?.amount || "");
+    setDeadline(drive?.deadline || "");
+  }, [drive?.id]);
+
+  const save = async () => {
+    if (!name.trim() || !amount) { show("Fill in drive name and amount.", "warn"); return; }
+    setSaving(true);
+    const [{ data: driveData, error: driveErr }, { error: repErr }] = await Promise.all([
+      supabase.from("drives").update({ name: name.trim(), amount: parseFloat(amount), deadline }).eq("id", drive.id).select().single(),
+      supabase.from("reps").update({ account_name: accName.trim(), account_number: accNum.trim(), bank_name: bankName.trim() }).eq("id", repId),
+    ]);
+    if (!driveErr && !repErr) {
+      onUpdated(driveData);
+      setRep(r => ({ ...r, account_name: accName.trim(), account_number: accNum.trim(), bank_name: bankName.trim() }));
+      show("Drive and account details saved.");
+    } else show((driveErr || repErr).message, "error");
+    setSaving(false);
+  };
+
+  const studentLink = `${window.location.origin}?rep=${repId}&drive=${drive?.id}`;
+
+  return (
+    <div style={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff",
         display: "flex", flexDirection: "column", gap: 16 }}>
-        <Input label="Payment purpose" placeholder="e.g. Departmental Excursion Levy"
-          value={name} onChange={e => setName(e.target.value)} />
-        <Input label="Amount (NGN)" type="number" placeholder="e.g. 5000"
-          value={amount} onChange={e => setAmount(e.target.value)} />
-        <Input label="Deadline (optional)" type="date"
-          value={deadline} onChange={e => setDeadline(e.target.value)} />
-        <PrimaryBtn onClick={save} disabled={saving} style={{ marginTop: 4 }}>
-          {saving ? "Saving..." : "Save drive"}
-        </PrimaryBtn>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint }}>Drive details</div>
+        <Input label="Payment purpose" placeholder="e.g. Departmental Excursion Levy" value={name} onChange={e => setName(e.target.value)} />
+        <Input label="Amount (NGN)" type="number" placeholder="e.g. 5000" value={amount} onChange={e => setAmount(e.target.value)} />
+        <Input label="Deadline (optional)" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
       </div>
 
-      {rep.drive_name && (
-        <div style={{ marginTop: 20, border: `1px solid ${T.rule}`, borderRadius: 4,
-          padding: 18, background: T.paper }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            textTransform: "uppercase", color: T.inkFaint, marginBottom: 10 }}>Current active drive</div>
-          {[["Name", rep.drive_name], ["Amount", fmt(rep.drive_amount)], ["Deadline", rep.drive_deadline || "Not set"]].map(([k,v]) => (
-            <div key={k} style={{ display: "flex", justifyContent: "space-between",
-              padding: "8px 0", borderBottom: `1px solid ${T.rule}`, fontSize: 13.5 }}>
-              <span style={{ color: T.inkFaint }}>{k}</span>
-              <span style={{ fontWeight: 600 }}>{v}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff",
+        display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 4 }}>Your account details</div>
+        <p style={{ color: T.inkMid, fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+          Students will see this when they submit. The scanner will also check that their receipt shows a transfer to this account number.
+        </p>
+        <Input label="Account name" placeholder="e.g. ADEBAYO MUSA" value={accName} onChange={e => setAccName(e.target.value)} />
+        <Input label="Account number" placeholder="e.g. 0123456789" value={accNum} onChange={e => setAccNum(e.target.value)} />
+        <Input label="Bank" placeholder="e.g. GTBank" value={bankName} onChange={e => setBankName(e.target.value)} />
+      </div>
 
-      {/* Share link — unique URL for this rep's students */}
-      <div style={{ marginTop: 20, border: `1px solid ${T.rule}`, borderRadius: 4,
-        padding: 18, background: "#fff" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-          textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Student portal link</div>
+      <PrimaryBtn onClick={save} disabled={saving}>{saving ? "Saving..." : "Save changes"}</PrimaryBtn>
+
+      <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 18, background: "#fff" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Student portal link</div>
         <p style={{ color: T.inkMid, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
-          Share this link with your class. Only your students will appear when they open it.
+          Share this with your class. Students will only see this drive's class list.
         </p>
         <div style={{ background: T.paper, border: `1px solid ${T.rule}`, borderRadius: 4,
-          padding: "10px 14px", fontFamily: F.mono, fontSize: 12.5, color: T.inkMid,
+          padding: "10px 14px", fontFamily: F.mono, fontSize: 12, color: T.inkMid,
           wordBreak: "break-all", marginBottom: 12 }}>
-          {`${window.location.origin}?rep=${rep.id}`}
+          {studentLink}
         </div>
         <GhostBtn style={{ width: "100%" }} onClick={() => {
-          navigator.clipboard.writeText(`${window.location.origin}?rep=${rep.id}`);
+          navigator.clipboard.writeText(studentLink);
           show("Link copied to clipboard.");
-        }}>
-          Copy link
-        </GhostBtn>
+        }}>Copy link</GhostBtn>
       </div>
     </div>
   );
 }
 
-// ── OVERVIEW ──────────────────────────────────────────────────────────────────
 // ── EXPORT TAB ────────────────────────────────────────────────────────────────
-function ExportTab({ verified, unpaid, drive, onExport, rep, setRep, show, submissions }) {
-  const [closing, setClosing] = useState(false);
+function ExportTab({ verified, unpaid, drive, onExport, onUpdated, show }) {
+  const [saving, setSaving] = useState(false);
 
-  const closeDrive = async () => {
-    if (!window.confirm("Close this drive? Students will no longer be able to submit payments.")) return;
-    setClosing(true);
-    const { error } = await supabase.from("reps").update({ drive_closed: true }).eq("id", rep.id);
-    if (!error) { setRep(r => ({ ...r, drive_closed: true })); show("Drive closed. No more submissions accepted."); }
+  const toggleClose = async () => {
+    const newState = !drive.closed;
+    if (newState && !window.confirm("Close this drive? Students will no longer be able to submit.")) return;
+    setSaving(true);
+    const { data, error } = await supabase.from("drives").update({ closed: newState }).eq("id", drive.id).select().single();
+    if (!error) { onUpdated(data); show(newState ? "Drive closed." : "Drive reopened."); }
     else show(error.message, "error");
-    setClosing(false);
-  };
-
-  const reopenDrive = async () => {
-    const { error } = await supabase.from("reps").update({ drive_closed: false }).eq("id", rep.id);
-    if (!error) { setRep(r => ({ ...r, drive_closed: false })); show("Drive reopened."); }
-    else show(error.message, "error");
+    setSaving(false);
   };
 
   return (
     <div style={{ maxWidth: 560, display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Export */}
       <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Export register</div>
         <p style={{ color: T.inkMid, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
@@ -483,9 +574,9 @@ function ExportTab({ verified, unpaid, drive, onExport, rep, setRep, show, submi
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1,
           background: T.rule, borderRadius: 6, overflow: "hidden", marginBottom: 20 }}>
           {[
-            { label: "Paid", val: verified.length, color: T.pass },
-            { label: "Unpaid", val: unpaid.length, color: T.warn },
-            { label: "Total", val: verified.length + unpaid.length, color: T.ink },
+            { label: "Paid",   val: verified.length, color: T.pass },
+            { label: "Unpaid", val: unpaid.length,   color: T.warn },
+            { label: "Total",  val: verified.length + unpaid.length, color: T.ink },
           ].map(s => (
             <div key={s.label} style={{ background: T.paper, padding: "16px 20px" }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: s.color, fontFamily: F.display }}>{s.val}</div>
@@ -496,18 +587,15 @@ function ExportTab({ verified, unpaid, drive, onExport, rep, setRep, show, submi
         <PrimaryBtn onClick={onExport} style={{ width: "100%" }}>Download Excel file</PrimaryBtn>
       </div>
 
-      {/* Close / reopen drive */}
       <div style={{ border: `1px solid ${T.rule}`, borderRadius: 4, padding: 24, background: "#fff" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Drive status</div>
         <p style={{ color: T.inkMid, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
-          {rep.drive_closed
-            ? "This drive is closed. Students cannot submit payments."
-            : "This drive is open. Students can still submit payments."}
+          {drive?.closed ? "This drive is closed. Students cannot submit." : "This drive is open. Students can still submit."}
         </p>
-        {rep.drive_closed
-          ? <GhostBtn onClick={reopenDrive} style={{ width: "100%" }}>Reopen drive</GhostBtn>
-          : <DangerBtn onClick={closeDrive} disabled={closing} style={{ width: "100%", padding: "11px 24px", fontSize: 13.5 }}>
-              {closing ? "Closing..." : "Close drive"}
+        {drive?.closed
+          ? <GhostBtn onClick={toggleClose} disabled={saving} style={{ width: "100%" }}>Reopen drive</GhostBtn>
+          : <DangerBtn onClick={toggleClose} disabled={saving} style={{ width: "100%", padding: "11px 24px", fontSize: 13.5 }}>
+              {saving ? "Closing..." : "Close drive"}
             </DangerBtn>
         }
       </div>
@@ -515,6 +603,7 @@ function ExportTab({ verified, unpaid, drive, onExport, rep, setRep, show, submi
   );
 }
 
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
 function RepOverview({ verified, flagged, unpaid, students, drive, mob }) {
   const pct = students.length ? Math.round((verified.length / students.length) * 100) : 0;
   return (
@@ -523,8 +612,8 @@ function RepOverview({ verified, flagged, unpaid, students, drive, mob }) {
         <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(3,1fr)", gap: 1,
           background: T.rule, borderRadius: 6, overflow: "hidden" }}>
           {[
-            { label: "Confirmed paid",   val: verified.length, sub: drive.amount ? fmt(verified.length * drive.amount) : "—", color: T.pass },
-            { label: "Not yet paid",     val: unpaid.length,   sub: drive.amount ? fmt(unpaid.length * drive.amount) + " outstanding" : "—", color: T.warn },
+            { label: "Confirmed paid",   val: verified.length, sub: drive?.amount ? fmt(verified.length * drive.amount) : "—", color: T.pass },
+            { label: "Not yet paid",     val: unpaid.length,   sub: drive?.amount ? fmt(unpaid.length * drive.amount) + " outstanding" : "—", color: T.warn },
             { label: "Flagged receipts", val: flagged.length,  sub: "requires review", color: T.fail },
           ].map((s,i) => (
             <div key={s.label} style={{ background: T.paper, padding: mob ? "16px 14px" : "22px 20px",
@@ -535,7 +624,6 @@ function RepOverview({ verified, flagged, unpaid, students, drive, mob }) {
             </div>
           ))}
         </div>
-
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
             textTransform: "uppercase", color: T.inkFaint, marginBottom: 12 }}>Still waiting on</div>
@@ -568,7 +656,7 @@ function RepOverview({ verified, flagged, unpaid, students, drive, mob }) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {students.map((st,i) => {
-              const isPaid = i < verified.length;
+              const isPaid = !!verified.find(v => v.matric === st.matric);
               return (
                 <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 10, opacity: isPaid ? 1 : 0.45 }}>
                   <div style={{ width: 3, height: 22, borderRadius: 2, background: isPaid ? T.vermil : T.rule, flexShrink: 0 }} />
@@ -680,7 +768,7 @@ function RepSubmissions({ submissions, onApprove, onReject, mob }) {
 }
 
 // ── CLASS LIST ────────────────────────────────────────────────────────────────
-function RepClassList({ rep, students, setStudents, paidSet, show, mob }) {
+function RepClassList({ repId, driveId, students, setStudents, paidSet, show, mob }) {
   const [addName,   setAddName]   = useState("");
   const [addMatric, setAddMatric] = useState("");
   const [pasteMode, setPasteMode] = useState(false);
@@ -693,7 +781,7 @@ function RepClassList({ rep, students, setStudents, paidSet, show, mob }) {
     if (!addName.trim()) return;
     setSaving(true);
     const { data, error } = await supabase.from("students")
-      .insert({ rep_id: rep.id, name: addName.trim(), matric: addMatric.trim() }).select().single();
+      .insert({ rep_id: repId, drive_id: driveId, name: addName.trim(), matric: addMatric.trim() }).select().single();
     if (!error) { setStudents(p => [...p, data]); show("Student added."); }
     else show(error.message, "error");
     setAddName(""); setAddMatric(""); setSaving(false);
@@ -707,14 +795,27 @@ function RepClassList({ rep, students, setStudents, paidSet, show, mob }) {
 
   const handleFile = e => {
     const file = e.target.files[0]; if (!file) return;
-    const r = new FileReader();
-    r.onload = ev => { setPasteText(ev.target.result); setPasteMode(true); };
-    r.readAsText(file);
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const wb = XLSX.read(ev.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        const text = rows.map(r => r.join("\t")).join("\n");
+        setPasteText(text); setPasteMode(true);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const r = new FileReader();
+      r.onload = ev => { setPasteText(ev.target.result); setPasteMode(true); };
+      r.readAsText(file);
+    }
   };
 
   const confirmImport = async () => {
     const existing = new Set(students.map(s => s.matric));
-    const toAdd = preview.filter(p => !existing.has(p.matric)).map(p => ({ rep_id: rep.id, name: p.name, matric: p.matric }));
+    const toAdd = preview.filter(p => !existing.has(p.matric)).map(p => ({ rep_id: repId, drive_id: driveId, name: p.name, matric: p.matric }));
     if (!toAdd.length) { show("No new students to add.", "warn"); return; }
     setSaving(true);
     const { data, error } = await supabase.from("students").insert(toAdd).select();
@@ -779,8 +880,7 @@ function RepClassList({ rep, students, setStudents, paidSet, show, mob }) {
           {!pasteMode ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div onClick={() => fileRef.current.click()}
-                style={{ border: `1px dashed ${T.ruleHard}`, borderRadius: 4, padding: "20px 14px",
-                  textAlign: "center", cursor: "pointer" }}
+                style={{ border: `1px dashed ${T.ruleHard}`, borderRadius: 4, padding: "20px 14px", textAlign: "center", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor=T.vermil; e.currentTarget.style.background=T.vermilBg; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor=T.ruleHard; e.currentTarget.style.background=""; }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.inkMid, marginBottom: 3 }}>Upload file</div>
@@ -860,7 +960,7 @@ function RepFlags({ flagged, onApprove, onReject }) {
 }
 
 // ── STUDENT PORTAL ────────────────────────────────────────────────────────────
-function StudentPortal({ students, submissions, setSubmissions, repId, drive, onBack }) {
+function StudentPortal({ students, submissions, setSubmissions, repId, driveId, drive, repAccount, onBack }) {
   const mob = useIsMobile();
   const [step,    setSt]    = useState("pick");
   const [sel,     setSel]   = useState(null);
@@ -875,10 +975,17 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
 
   const validate = (data) => {
     if (submissions.map(s=>s.ref_no).includes(data.refNo)) return "Duplicate reference number";
-    const expectedAmount = parseFloat(drive.amount);
-    const receivedAmount = parseFloat(data.amount);
-    if (expectedAmount && receivedAmount && receivedAmount !== expectedAmount) {
-      return `Amount mismatch — expected ${fmt(expectedAmount)}, found ${fmt(receivedAmount)}`;
+    const expected = parseFloat(drive?.amount);
+    const received = parseFloat(data.amount);
+    if (expected && received && received !== expected) {
+      return `Amount mismatch — expected ${fmt(expected)}, found ${fmt(received)}`;
+    }
+    if (repAccount?.account_number && data.accountNumber) {
+      const repAcc = repAccount.account_number.replace(/\s/g, "");
+      const receiptAcc = data.accountNumber.replace(/\s/g, "");
+      if (receiptAcc && !receiptAcc.includes(repAcc) && !repAcc.includes(receiptAcc)) {
+        return `Account number mismatch — payment not sent to the rep's account`;
+      }
     }
     return null;
   };
@@ -891,29 +998,22 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         const base64 = e.target.result.split(",")[1];
         const mediaType = file.type || "image/jpeg";
         const res = await fetch("/.netlify/functions/scan-receipt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageBase64: base64, mediaType }),
         });
         const data = await res.json();
-        if (data.error) {
-          show("Could not read receipt. Please try a clearer image.", "error");
-          setScan(false);
-          return;
-        }
+        if (data.error) { show("Could not read receipt. Please try a clearer image.", "error"); setScan(false); return; }
         setScnd({
-          refNo:  data.refNo  || "UNKNOWN",
-          amount: data.amount || 0,
-          bank:   data.bank   || "Unknown Bank",
-          date:   data.date   || today(),
+          refNo: data.refNo||"UNKNOWN",
+          amount: data.amount||0,
+          bank: data.bank||"Unknown Bank",
+          date: data.date||today(),
+          accountNumber: data.accountNumber||"",
         });
         setScan(false);
       };
       reader.readAsDataURL(file);
-    } catch (err) {
-      show("Something went wrong scanning the receipt.", "error");
-      setScan(false);
-    }
+    } catch (err) { show("Something went wrong scanning the receipt.", "error"); setScan(false); }
   };
 
   const submitReceipt = async () => {
@@ -921,9 +1021,9 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
     setSaving(true);
     const flag = validate(scanned);
     const { data, error } = await supabase.from("submissions").insert({
-      rep_id: repId, student_id: sel.id, name: sel.name, matric: sel.matric,
-      method: "receipt", ref_no: scanned.refNo, amount: scanned.amount,
-      bank: scanned.bank, date: scanned.date,
+      rep_id: repId, drive_id: driveId, student_id: sel.id,
+      name: sel.name, matric: sel.matric, method: "receipt",
+      ref_no: scanned.refNo, amount: scanned.amount, bank: scanned.bank, date: scanned.date,
       status: flag ? "flagged" : "verified", flag_reason: flag||null,
     }).select().single();
     if (!error) { setSubmissions(p=>[...p,data]); setSt("done"); }
@@ -941,7 +1041,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         <span style={{ fontFamily: F.display, fontSize: 18, fontStyle: "italic" }}>Rep<span style={{ color: T.vermil }}>Desk</span></span>
         <GhostBtn style={{ padding: "5px 12px", fontSize: 12.5 }} onClick={back}>Back</GhostBtn>
       </div>
-      {drive.name && (
+      {drive?.name && (
         <div style={{ background: T.navy, padding: "9px 20px", display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, flexWrap: "wrap" }}>
           <span style={{ color: T.vermil, fontWeight: 700, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase" }}>Drive</span>
           <span style={{ color: "#4A5568" }}>—</span>
@@ -969,22 +1069,18 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         <p style={{ color: T.inkMid, fontSize: 14, margin: 0, lineHeight: 1.6 }}>Select your name from the class list. No account or login required.</p>
       </div>
 
-      {drive.closed && (
+      {drive?.closed && (
         <div style={{ background: T.failBg, border: `1px solid #F0B8B3`, borderRadius: 4,
           padding: "12px 16px", marginBottom: 16, fontSize: 13.5, color: T.fail }}>
           This payment drive has been closed by the course rep. No more submissions are being accepted.
         </div>
       )}
 
-      {!drive.closed && students.length > 0 && (
-        <input
-          style={{ ...inp, marginBottom: 14 }}
-          placeholder="Search your name..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+      {!drive?.closed && students.length > 0 && (
+        <input style={{ ...inp, marginBottom: 14 }} placeholder="Search your name..."
+          value={search} onChange={e => setSearch(e.target.value)}
           onFocus={e => e.target.style.borderColor = T.vermil}
-          onBlur={e => e.target.style.borderColor = T.rule}
-        />
+          onBlur={e => e.target.style.borderColor = T.rule} />
       )}
 
       {students.length===0
@@ -1006,7 +1102,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
                     const sub = submissions.find(s=>s.matric===st.matric);
                     return (
                       <div key={st.id}
-                        onClick={() => { if (drive.closed) return; if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
+                        onClick={() => { if (drive?.closed) return; if (!sub||sub.status==="flagged") { setSel(st); setSt("upload"); } }}
                         style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
                           padding: mob ? "14px 14px" : "14px 18px",
                           borderBottom: i<filtered.length-1 ? `1px solid ${T.rule}` : "none",
@@ -1037,8 +1133,26 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
           Submitting as: <strong>{sel?.name}</strong>
           {sel?.matric && <span style={{ color: T.inkFaint, fontFamily: F.mono, fontSize: 12, marginLeft: 8 }}>{sel?.matric}</span>}
         </div>
+
+        {repAccount?.account_number && (
+          <div style={{ background: T.passBg, border: `1px solid #A8D9BE`, borderRadius: 4, padding: "12px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.pass, marginBottom: 8 }}>Pay to this account</div>
+            {[
+              ["Account name",   repAccount.account_name],
+              ["Account number", repAccount.account_number],
+              ["Bank",           repAccount.bank_name],
+            ].filter(([,v]) => v).map(([k,v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5,
+                padding: "5px 0", borderBottom: `1px solid #A8D9BE` }}>
+                <span style={{ color: T.inkFaint }}>{k}</span>
+                <span style={{ fontWeight: 700, fontFamily: k === "Account number" ? F.mono : F.body }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <p style={{ color: T.inkMid, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-          Upload a screenshot or photo of your bank receipt. The scanner reads all details automatically — no typing required.
+          Upload a screenshot or photo of your bank receipt. The scanner reads all details automatically.
         </p>
       </div>
 
@@ -1046,14 +1160,14 @@ function StudentPortal({ students, submissions, setSubmissions, repId, drive, on
         <>
           <div onClick={() => fileRef.current.click()}
             style={{ border: `1px dashed ${T.ruleHard}`, borderRadius: 4,
-              padding: mob ? "36px 16px" : "52px 20px",
-              textAlign: "center", cursor: "pointer", background: "#fff" }}
+              padding: mob ? "36px 16px" : "52px 20px", textAlign: "center", cursor: "pointer", background: "#fff" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor=T.vermil; e.currentTarget.style.background=T.vermilBg; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor=T.ruleHard; e.currentTarget.style.background="#fff"; }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: T.inkMid, marginBottom: 6 }}>Tap to upload receipt</div>
             <div style={{ fontSize: 12.5, color: T.inkFaint }}>Screenshot, photo, or PDF</div>
           </div>
-          <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) scanReceipt(e.target.files[0]); }} />
+          <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: "none" }}
+            onChange={e => { if (e.target.files[0]) scanReceipt(e.target.files[0]); }} />
         </>
       )}
 
@@ -1140,21 +1254,28 @@ function StudentPublicPortal({ onBack }) {
   const [students,    setStudents]    = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [repId,       setRepId]       = useState(null);
-  const [drive,       setDrive]       = useState({ name: "", amount: 0, deadline: "", closed: false });
+  const [driveId,     setDriveId]     = useState(null);
+  const [drive,       setDrive]       = useState(null);
+  const [repAccount,  setRepAccount]  = useState(null);
   const [notFound,    setNotFound]    = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const rid = params.get("rep");
-    if (!rid) { setNotFound(true); return; }
-    setRepId(rid);
-    supabase.from("students").select("*").eq("rep_id", rid).order("name")
+    const params   = new URLSearchParams(window.location.search);
+    const rid      = params.get("rep");
+    const did      = params.get("drive");
+    if (!rid || !did) { setNotFound(true); return; }
+    setRepId(rid); setDriveId(did);
+
+    supabase.from("drives").select("*").eq("id", did).eq("rep_id", rid).single()
+      .then(({ data }) => { if (data) setDrive(data); else setNotFound(true); });
+
+    supabase.from("reps").select("account_name, account_number, bank_name").eq("id", rid).single()
+      .then(({ data }) => { if (data) setRepAccount(data); });
+
+    supabase.from("students").select("*").eq("drive_id", did).order("name")
       .then(({ data }) => setStudents(data || []));
-    supabase.from("reps").select("drive_name, drive_amount, drive_deadline, drive_closed").eq("id", rid).single()
-      .then(({ data: r }) => {
-        if (r) setDrive({ name: r.drive_name||"", amount: r.drive_amount||0, deadline: r.drive_deadline||"", closed: r.drive_closed||false });
-      });
-    supabase.from("submissions").select("*").eq("rep_id", rid)
+
+    supabase.from("submissions").select("*").eq("drive_id", did)
       .then(({ data }) => setSubmissions(data || []));
   }, []);
 
@@ -1163,11 +1284,9 @@ function StudentPublicPortal({ onBack }) {
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ textAlign: "center", maxWidth: 400 }}>
         <div style={{ height: 3, background: "#E8400C", marginBottom: 40 }} />
-        <div style={{ fontFamily: "Georgia, serif", fontSize: 28, color: "#0E1423", marginBottom: 12 }}>
-          No class found
-        </div>
+        <div style={{ fontFamily: "Georgia, serif", fontSize: 28, color: "#0E1423", marginBottom: 12 }}>No class found</div>
         <p style={{ color: "#3D4A63", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-          This link doesn't include a valid class reference. Ask your course rep to share the correct link from their Drive Setup page.
+          This link is invalid or has expired. Ask your course rep to share the correct link from their Drive Setup page.
         </p>
         <button onClick={onBack} style={{ background: "none", border: "1px solid #DDD9D0",
           color: "#3D4A63", borderRadius: 4, padding: "10px 20px", cursor: "pointer",
@@ -1176,24 +1295,24 @@ function StudentPublicPortal({ onBack }) {
     </div>
   );
 
+  if (!drive) return (
+    <div style={{ minHeight: "100vh", background: "#F5F4F0", display: "flex", alignItems: "center",
+      justifyContent: "center", fontFamily: "'Inter', sans-serif", color: "#8C96A8" }}>Loading...</div>
+  );
+
   return <StudentPortal students={students} submissions={submissions}
-    setSubmissions={setSubmissions} repId={repId} drive={drive} onBack={onBack} />;
+    setSubmissions={setSubmissions} repId={repId} driveId={driveId}
+    drive={drive} repAccount={repAccount} onBack={onBack} />;
 }
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen,      setScreen]      = useState("landing");
-  const [repUser,     setRepUser]     = useState(null);
-  const [students,    setStudents]    = useState([]);
-  const [submissions, setSubmissions] = useState([]);
-  const [loading,     setLoading]     = useState(false);
+  const [screen,  setScreen]  = useState("landing");
+  const [repUser, setRepUser] = useState(null);
 
   useEffect(() => {
-    // If URL has ?rep=, go straight to student portal
     const params = new URLSearchParams(window.location.search);
     if (params.get("rep")) { setScreen("student"); return; }
-
-    // Otherwise check for existing rep session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const { data: profile } = await supabase.from("reps").select("*").eq("id", session.user.id).single();
@@ -1202,35 +1321,13 @@ export default function App() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!repUser) return;
-    setLoading(true);
-    Promise.all([
-      supabase.from("students").select("*").eq("rep_id", repUser.id).order("name"),
-      supabase.from("submissions").select("*").eq("rep_id", repUser.id).order("created_at", { ascending: false }),
-    ]).then(([{ data: s }, { data: sub }]) => {
-      setStudents(s || []);
-      setSubmissions(sub || []);
-      setLoading(false);
-    });
-
-    const channel = supabase.channel("submissions-live")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "submissions", filter: `rep_id=eq.${repUser.id}` },
-        payload => setSubmissions(p => [payload.new, ...p])
-      ).subscribe();
-
-    return () => supabase.removeChannel(channel);
-  }, [repUser]);
-
   const logout = async () => {
     await supabase.auth.signOut();
-    setRepUser(null); setStudents([]); setSubmissions([]); setScreen("landing");
+    setRepUser(null); setScreen("landing");
   };
 
   if (screen==="landing")  return <Landing onSelect={s => setScreen(s==="rep"?"rep-auth":"student")} />;
   if (screen==="rep-auth") return <RepAuth onBack={() => setScreen("landing")} onLogin={rep => { setRepUser(rep); setScreen("rep"); }} />;
-  if (screen==="rep")      return <RepDashboard rep={repUser} setRep={setRepUser} onLogout={logout}
-    students={students} setStudents={setStudents}
-    submissions={submissions} setSubmissions={setSubmissions} loading={loading} />;
+  if (screen==="rep")      return <RepDashboard rep={repUser} setRep={setRepUser} onLogout={logout} />;
   if (screen==="student")  return <StudentPublicPortal onBack={() => setScreen("landing")} />;
 }

@@ -29,8 +29,10 @@ exports.handler = async function (event) {
             },
             {
               type: "text",
-              text: `Extract from this Nigerian bank receipt. Return ONLY this JSON, no other text:
-{"refNo":"reference number here","amount":0,"bank":"bank name here","date":"YYYY-MM-DD"}`,
+              text: `Extract from this Nigerian bank payment receipt. Return ONLY this JSON, no other text:
+{"refNo":"reference or transaction number","amount":0,"bank":"sending bank name","date":"YYYY-MM-DD","accountNumber":"destination account number the money was sent TO"}
+
+For accountNumber: look for the beneficiary or destination account number (not the sender's account). Use null if not found.`,
             },
           ],
         }],
