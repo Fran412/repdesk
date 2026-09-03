@@ -974,20 +974,27 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
   const show = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
   const validate = (data) => {
-    if (submissions.map(s=>s.ref_no).includes(data.refNo)) return "Duplicate reference number";
+    const flags = [...(data.fraudFlags || [])];
+
+    if (submissions.map(s=>s.ref_no).includes(data.refNo)) {
+      flags.push("Duplicate reference number");
+    }
+
     const expected = parseFloat(drive?.amount);
     const received = parseFloat(data.amount);
     if (expected && received && received !== expected) {
-      return `Amount mismatch — expected ${fmt(expected)}, found ${fmt(received)}`;
+      flags.push(`Amount mismatch — expected ${fmt(expected)}, found ${fmt(received)}`);
     }
+
     if (repAccount?.account_number && data.accountNumber) {
-      const repAcc = repAccount.account_number.replace(/\s/g, "");
+      const repAcc     = repAccount.account_number.replace(/\s/g, "");
       const receiptAcc = data.accountNumber.replace(/\s/g, "");
       if (receiptAcc && !receiptAcc.includes(repAcc) && !repAcc.includes(receiptAcc)) {
-        return `Account number mismatch — payment not sent to the rep's account`;
+        flags.push("Account number mismatch — payment not sent to the rep's account");
       }
     }
-    return null;
+
+    return flags.length > 0 ? flags.join(" | ") : null;
   };
 
   const scanReceipt = async (file) => {
@@ -1004,11 +1011,15 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
         const data = await res.json();
         if (data.error) { show("Could not read receipt. Please try a clearer image.", "error"); setScan(false); return; }
         setScnd({
-          refNo: data.refNo||"UNKNOWN",
-          amount: data.amount||0,
-          bank: data.bank||"Unknown Bank",
-          date: data.date||today(),
-          accountNumber: data.accountNumber||"",
+          refNo:         data.refNo         || "UNKNOWN",
+          amount:        data.amount        || 0,
+          bank:          data.bank          || "Unknown Bank",
+          date:          data.date          || today(),
+          accountNumber: data.accountNumber || "",
+          recipientName: data.recipientName || "",
+          senderName:    data.senderName    || "",
+          fraudFlags:    data.fraudFlags    || [],
+          flagged:       data.flagged       || false,
         });
         setScan(false);
       };
@@ -1183,19 +1194,52 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
 
       {scanned && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ border: `1px solid #A8D9BE`, borderRadius: 4, overflow: "hidden", background: "#fff" }}>
-            <div style={{ background: T.passBg, padding: "10px 18px", borderBottom: `1px solid #A8D9BE`, fontSize: 12.5, color: T.pass, fontWeight: 700 }}>
-              Receipt scanned successfully
+          <div style={{ border: `1px solid ${scanned.flagged ? "#F0B8B3" : "#A8D9BE"}`, borderRadius: 4, overflow: "hidden", background: "#fff" }}>
+            <div style={{ background: scanned.flagged ? T.failBg : T.passBg,
+              padding: "10px 18px", borderBottom: `1px solid ${scanned.flagged ? "#F0B8B3" : "#A8D9BE"}`,
+              fontSize: 12.5, color: scanned.flagged ? T.fail : T.pass, fontWeight: 700 }}>
+              {scanned.flagged ? "Receipt scanned — suspicious activity detected" : "Receipt scanned successfully"}
             </div>
+
+            {scanned.flagged && scanned.fraudFlags?.length > 0 && (
+              <div style={{ background: T.failBg, padding: "10px 18px", borderBottom: `1px solid #F0B8B3` }}>
+                {scanned.fraudFlags.map((f, i) => (
+                  <div key={i} style={{ fontSize: 12.5, color: T.fail, marginBottom: i < scanned.fraudFlags.length - 1 ? 4 : 0 }}>
+                    ⚠ {f}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-              {[["Reference number",scanned.refNo,true],["Amount",fmt(scanned.amount),false],["Bank",scanned.bank,false],["Date",scanned.date,false]].map(([k,v,mono],i) => (
-                <div key={k} style={{ padding: "14px 16px", borderBottom: i<2?`1px solid ${T.rule}`:"none", borderRight: i%2===0?`1px solid ${T.rule}`:"none" }}>
+              {[
+                ["Reference", scanned.refNo,         true],
+                ["Amount",    fmt(scanned.amount),   false],
+                ["Bank",      scanned.bank,           false],
+                ["Date",      scanned.date,           false],
+                ...(scanned.recipientName ? [["Recipient", scanned.recipientName, false]] : []),
+                ...(scanned.senderName    ? [["Sender",    scanned.senderName,    false]] : []),
+              ].map(([k,v,mono], i, arr) => (
+                <div key={k} style={{
+                  padding: "12px 16px",
+                  borderBottom: i < arr.length - 2 ? `1px solid ${T.rule}` : "none",
+                  borderRight: i % 2 === 0 ? `1px solid ${T.rule}` : "none",
+                  gridColumn: arr.length % 2 !== 0 && i === arr.length - 1 ? "span 2" : "auto",
+                }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 4 }}>{k}</div>
-                  <div style={{ fontWeight: 700, fontSize: mob ? 13 : 14, fontFamily: mono?F.mono:F.body, wordBreak: "break-all" }}>{v}</div>
+                  <div style={{ fontWeight: 700, fontSize: mob ? 13 : 14, fontFamily: mono ? F.mono : F.body, wordBreak: "break-all" }}>{v}</div>
                 </div>
               ))}
             </div>
           </div>
+
+          {scanned.flagged && (
+            <div style={{ background: T.warnBg, border: `1px solid #E8CFA0`, borderRadius: 4,
+              padding: "12px 16px", fontSize: 13, color: T.warn, lineHeight: 1.6 }}>
+              This receipt has been flagged. You can still submit it — the course rep will review it manually.
+            </div>
+          )}
+
           <div style={{ fontSize: 12.5, color: T.inkFaint }}>If anything looks wrong, upload a clearer image.</div>
           <div style={{ display: "flex", gap: 10 }}>
             <PrimaryBtn onClick={submitReceipt} disabled={saving} style={{ flex: 1 }}>
