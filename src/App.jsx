@@ -1125,7 +1125,10 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
                           <div style={{ fontWeight: 500, fontSize: 14 }}>{st.name}</div>
                           {st.matric && <div style={{ fontFamily: F.mono, fontSize: 11.5, color: T.inkFaint, marginTop: 2 }}>{st.matric}</div>}
                         </div>
-                        {sub ? <Chip status={sub.status} /> : <span style={{ fontSize: 12.5, color: T.inkFaint, whiteSpace: "nowrap" }}>Select &rarr;</span>}
+                        {sub && sub.status==="verified"
+                          ? <span style={{ fontSize: 12.5, color: T.pass, fontWeight: 600 }}>Submitted</span>
+                          : <span style={{ fontSize: 12.5, color: T.inkFaint, whiteSpace: "nowrap" }}>Select &rarr;</span>
+                        }
                       </div>
                     );
                   })}
@@ -1194,29 +1197,17 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
 
       {scanned && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ border: `1px solid ${scanned.flagged ? "#F0B8B3" : "#A8D9BE"}`, borderRadius: 4, overflow: "hidden", background: "#fff" }}>
-            <div style={{ background: scanned.flagged ? T.failBg : T.passBg,
-              padding: "10px 18px", borderBottom: `1px solid ${scanned.flagged ? "#F0B8B3" : "#A8D9BE"}`,
-              fontSize: 12.5, color: scanned.flagged ? T.fail : T.pass, fontWeight: 700 }}>
-              {scanned.flagged ? "Receipt scanned — suspicious activity detected" : "Receipt scanned successfully"}
+          <div style={{ border: `1px solid #A8D9BE`, borderRadius: 4, overflow: "hidden", background: "#fff" }}>
+            <div style={{ background: T.passBg, padding: "10px 18px",
+              borderBottom: `1px solid #A8D9BE`, fontSize: 12.5, color: T.pass, fontWeight: 700 }}>
+              Receipt scanned successfully
             </div>
-
-            {scanned.flagged && scanned.fraudFlags?.length > 0 && (
-              <div style={{ background: T.failBg, padding: "10px 18px", borderBottom: `1px solid #F0B8B3` }}>
-                {scanned.fraudFlags.map((f, i) => (
-                  <div key={i} style={{ fontSize: 12.5, color: T.fail, marginBottom: i < scanned.fraudFlags.length - 1 ? 4 : 0 }}>
-                    ⚠ {f}
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
               {[
-                ["Reference", scanned.refNo,         true],
-                ["Amount",    fmt(scanned.amount),   false],
-                ["Bank",      scanned.bank,           false],
-                ["Date",      scanned.date,           false],
+                ["Reference", scanned.refNo,       true],
+                ["Amount",    fmt(scanned.amount), false],
+                ["Bank",      scanned.bank,         false],
+                ["Date",      scanned.date,         false],
                 ...(scanned.recipientName ? [["Recipient", scanned.recipientName, false]] : []),
                 ...(scanned.senderName    ? [["Sender",    scanned.senderName,    false]] : []),
               ].map(([k,v,mono], i, arr) => (
@@ -1232,14 +1223,6 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
               ))}
             </div>
           </div>
-
-          {scanned.flagged && (
-            <div style={{ background: T.warnBg, border: `1px solid #E8CFA0`, borderRadius: 4,
-              padding: "12px 16px", fontSize: 13, color: T.warn, lineHeight: 1.6 }}>
-              This receipt has been flagged. You can still submit it — the course rep will review it manually.
-            </div>
-          )}
-
           <div style={{ fontSize: 12.5, color: T.inkFaint }}>If anything looks wrong, upload a clearer image.</div>
           <div style={{ display: "flex", gap: 10 }}>
             <PrimaryBtn onClick={submitReceipt} disabled={saving} style={{ flex: 1 }}>
