@@ -92,17 +92,15 @@ Return ONLY this JSON, no other text:
     }
 
     // ── Step 3: Internal consistency checks ───────────────────────────────
-    // Check if date is in the future
+    // Check if date is in the future — add 2 day buffer for timezone differences
     if (extracted.date) {
-      const receiptDate = new Date(extracted.date);
+      const receiptDate = new Date(extracted.date + "T12:00:00Z");
       const today = new Date();
-      if (receiptDate > today) {
+      today.setHours(0, 0, 0, 0);
+      const twoDaysFromNow = new Date(today);
+      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+      if (receiptDate > twoDaysFromNow) {
         flags.push("Receipt date is in the future");
-      }
-      // Check if date is suspiciously old (more than 30 days)
-      const daysDiff = (today - receiptDate) / (1000 * 60 * 60 * 24);
-      if (daysDiff > 30) {
-        flags.push("Receipt is more than 30 days old");
       }
     }
 
@@ -143,7 +141,8 @@ function checkRefDateEncoding(refNo, receiptDateStr, bank) {
   if (!refNo || !receiptDateStr) return null;
 
   const ref = refNo.replace(/\s/g, "").toUpperCase();
-  const receiptDate = new Date(receiptDateStr);
+  // Parse as noon UTC to avoid timezone day-shift issues
+  const receiptDate = new Date(receiptDateStr + "T12:00:00Z");
   if (isNaN(receiptDate.getTime())) return null;
 
   const year2  = String(receiptDate.getFullYear()).slice(2);  // "26"
