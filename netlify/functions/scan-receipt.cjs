@@ -92,17 +92,7 @@ Return ONLY this JSON, no other text:
     }
 
     // ── Step 3: Internal consistency checks ───────────────────────────────
-    // Check if date is in the future — add 2 day buffer for timezone differences
-    if (extracted.date) {
-      const receiptDate = new Date(extracted.date + "T12:00:00Z");
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const twoDaysFromNow = new Date(today);
-      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
-      if (receiptDate > twoDaysFromNow) {
-        flags.push("Receipt date is in the future");
-      }
-    }
+    // Future date check removed — handled by reference date encoding check above
 
     // ── Step 4: Image forensics ────────────────────────────────────────────
     if (extracted.forensics?.suspicious) {
