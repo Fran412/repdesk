@@ -26,7 +26,7 @@ exports.handler = async function (event) {
             },
             {
               type: "text",
-              text: `You are a fraud detection system analyzing a Nigerian bank payment receipt.
+              text: `You are a fraud detection system analyzing a Nigerian bank payment receipt. Today's date is ${new Date().toISOString().slice(0,10)}.
 
 Perform TWO tasks:
 
@@ -46,6 +46,8 @@ TASK 2 - Image forensics. Examine the image carefully for:
 - Signs that text has been overlaid or edited
 - Inconsistent color or brightness in specific regions
 - Any visual anomaly that suggests digital manipulation
+
+IMPORTANT: Do NOT flag a date as suspicious just because it seems recent or you are uncertain about the current date. Today is ${new Date().toISOString().slice(0,10)} — only flag a date if it is clearly after today's date or if there is a visual anomaly in the date field itself.
 
 Return ONLY this JSON, no other text:
 {
