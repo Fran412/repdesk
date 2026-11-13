@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component } from "react";
 import { supabase } from "./supabase";
 import * as XLSX from "xlsx";
 
@@ -39,8 +39,135 @@ function useIsMobile() {
   return mobile;
 }
 
+// ── Class list imports: shared clean up, Word and PDF readers ────────────────
+// Every upload type (and pasted text) goes through isHeadingLine so titles such as
+// "ANA204 CLASS LIST FOR 200L", department lines and column headings never become students.
+const HEADING_WORDS = /\b(class\s*list|list\s+of|attendance|register|session|semester|department|faculty|university|college|lecturer|signature)\b/i;
+// Words that can also appear in a name only count when they look like a label: "Total: 45", "200 Level"
+const LABEL_WORDS   = /\b(total|course|level|date)\b\s*[:\-]|\b\d{2,3}\s*level\b|\blevel\s*\d{3}\b/i;
+const COLUMN_WORDS  = /\b(names?|matric|reg(istration)?\.?\s*(no|number)|s\/?n|surname|full\s*name)\b/i;
+
+function isHeadingLine(line) {
+  const cells = line.split(/[\t,|;]+/).map(c => c.trim()).filter(Boolean);
+  const text = cells.join(" ");
+  if (!text) return true;
+  if (HEADING_WORDS.test(text) || LABEL_WORDS.test(text)) return true;
+  if (!/\d{3,}/.test(text) && COLUMN_WORDS.test(text)) return true;                     // column headings
+  if (cells.length === 1 && /\b\d{3}\s?(L|level)\b/i.test(text)) return true;            // "200L"
+  if (/^(page\s*)?\d+\s*(of|\/)\s*\d+$/i.test(text) || /^page\s*\d+$/i.test(text)) return true;
+  return false;
+}
+
+function dropHeadingLines(raw) {
+  const lines = String(raw || "").split(/\r?\n/).filter(l => l.trim());
+  const kept = lines.filter(l => !isHeadingLine(l));
+  return { text: kept.join("\n"), removed: lines.length - kept.length };
+}
+
+// A token that looks like a matric number: has a digit, 5+ characters, and is not a session like 2025/2026
+const isMatricToken = t => /\d/.test(t) && t.length >= 5 && !/\s/.test(t) && !/^\d{4}\/\d{4}$/.test(t);
+
+// Puts a tab between name and matric when only a space separated them, and puts the name
+// first when the matric came first. Used for Word and PDF, where columns are not explicit.
+function tidyListLines(lines) {
+  return lines.map(l => {
+    if (!l.includes("\t")) {
+      const t = l.split(/\s+/);
+      const last = t[t.length - 1];
+      return t.length >= 2 && isMatricToken(last) ? t.slice(0, -1).join(" ") + "\t" + last : l;
+    }
+    const cells = l.split("\t").map(c => c.trim()).filter(Boolean);
+    const lead = /^\d{1,3}[.)]?$/.test(cells[0]) ? 1 : 0;   // skip a serial number column
+    if (cells.length - lead >= 2 && isMatricToken(cells[lead]) && !isMatricToken(cells[lead + 1])) {
+      return cells[lead + 1] + "\t" + cells[lead];
+    }
+    return l;
+  });
+}
+
+// Walks a Word document in order: table rows become tab separated lines, other blocks become lines
+function htmlToLines(body) {
+  const lines = [];
+  const clean = s => s.replace(/\s+/g, " ").trim();
+  const visit = node => {
+    for (const el of Array.from(node.children)) {
+      const tag = el.tagName.toLowerCase();
+      if (tag === "table") {
+        for (const tr of Array.from(el.querySelectorAll("tr"))) {
+          const cells = Array.from(tr.children).map(c => clean(c.textContent)).filter(Boolean);
+          if (cells.length) lines.push(cells.join("\t"));
+        }
+      } else if (tag === "ul" || tag === "ol") {
+        for (const li of Array.from(el.children)) { const t = clean(li.textContent); if (t) lines.push(t); }
+      } else if (el.children.length && !/^(p|h[1-6])$/.test(tag)) {
+        visit(el);
+      } else {
+        const holder = el.ownerDocument.createElement("div");
+        holder.innerHTML = el.innerHTML.replace(/<br\s*\/?>/gi, "\n");
+        holder.textContent.split("\n").forEach(part => { const t = clean(part); if (t) lines.push(t); });
+      }
+    }
+  };
+  visit(body);
+  return lines;
+}
+
+async function readDocxText(file) {
+  const mod = await import("mammoth/mammoth.browser.js");
+  const mammoth = mod.default || mod;
+  const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  const body = new DOMParser().parseFromString(html, "text/html").body;
+  return tidyListLines(htmlToLines(body)).join("\n");
+}
+
+// PDF: read the text layer and rebuild one line per row, with a tab between table columns
+function pdfItemsToLines(items) {
+  const frags = items
+    .filter(it => typeof it.str === "string" && it.str.trim() !== "")
+    .map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], w: it.width || 0 }));
+  frags.sort((a, b) => (Math.abs(a.y - b.y) > 3 ? b.y - a.y : a.x - b.x));
+  const rows = [];
+  for (const f of frags) {
+    const row = rows[rows.length - 1];
+    if (row && Math.abs(row.y - f.y) <= 3) row.items.push(f);
+    else rows.push({ y: f.y, items: [f] });
+  }
+  return rows.map(row => {
+    row.items.sort((a, b) => a.x - b.x);
+    let line = "", prevEnd = null;
+    for (const it of row.items) {
+      if (prevEnd !== null) { const gap = it.x - prevEnd; line += gap > 12 ? "\t" : gap > 1.5 ? " " : ""; }
+      line += it.s.trim();
+      prevEnd = it.x + it.w;
+    }
+    return line.trim();
+  }).filter(Boolean);
+}
+
+// Lines repeated on several pages (running titles, footers) are not students
+function dropRepeatedAcrossPages(pages) {
+  if (pages.length < 2) return pages.flat();
+  const count = new Map();
+  pages.forEach(pg => new Set(pg).forEach(l => count.set(l, (count.get(l) || 0) + 1)));
+  return pages.flat().filter(l => count.get(l) < 2);
+}
+
+async function readPdfText(file) {
+  const pdfjs = await import("pdfjs-dist");
+  const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = worker;
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    pages.push(pdfItemsToLines(content.items));
+  }
+  return tidyListLines(dropRepeatedAcrossPages(pages)).join("\n");
+}
+
 function parseBulk(text) {
-  return text.trim().split("\n").filter(Boolean).map((line) => {
+  return text.trim().split("\n").filter(Boolean).filter(l => !isHeadingLine(l)).map((line) => {
     const clean = line.replace(/^\d+[\.\)\-\s]+/, "").trim();
     const parts = clean.split(/[\t,|;]+/).map(s => s.trim()).filter(Boolean);
     return parts.length >= 2 ? { name: parts[0], matric: parts[1] } : { name: parts[0]||clean, matric: "" };
@@ -793,8 +920,17 @@ function RepClassList({ repId, driveId, students, setStudents, paidSet, show, mo
     show("Student removed.", "warn");
   };
 
+  // Every file type ends up here: headings are removed, then the text goes to the editable preview box
+  const finishImport = raw => {
+    const { text, removed } = dropHeadingLines(raw);
+    if (!text.trim()) { show("No students found in that file.", "error"); return; }
+    setPasteText(text); setPasteMode(true);
+    if (removed) show(`Skipped ${removed} heading line${removed !== 1 ? "s" : ""}.`, "warn");
+  };
+
   const handleFile = e => {
     const file = e.target.files[0]; if (!file) return;
+    e.target.value = "";   // lets the same file be chosen again
     const name = file.name.toLowerCase();
     if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
       const reader = new FileReader();
@@ -802,13 +938,20 @@ function RepClassList({ repId, driveId, students, setStudents, paidSet, show, mo
         const wb = XLSX.read(ev.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        const text = rows.map(r => r.join("\t")).join("\n");
-        setPasteText(text); setPasteMode(true);
+        finishImport(rows.map(r => r.join("\t")).join("\n"));
       };
       reader.readAsArrayBuffer(file);
+    } else if (name.endsWith(".pdf")) {
+      readPdfText(file).then(finishImport)
+        .catch(() => show("Could not read that PDF. If it is a scan or photo, paste the list instead.", "error"));
+    } else if (name.endsWith(".docx")) {
+      readDocxText(file).then(finishImport)
+        .catch(() => show("Could not read that Word file.", "error"));
+    } else if (name.endsWith(".doc")) {
+      show("Old .doc files cannot be read. Open it in Word, save as .docx or PDF, then upload that.", "error");
     } else {
       const r = new FileReader();
-      r.onload = ev => { setPasteText(ev.target.result); setPasteMode(true); };
+      r.onload = ev => finishImport(ev.target.result);
       r.readAsText(file);
     }
   };
@@ -1050,7 +1193,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
       <div style={{ background: "#fff", borderBottom: `1px solid ${T.rule}`,
         padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontFamily: F.display, fontSize: 18, fontStyle: "italic" }}>Rep<span style={{ color: T.vermil }}>Desk</span></span>
-        <GhostBtn style={{ padding: "5px 12px", fontSize: 12.5 }} onClick={back}>Back</GhostBtn>
+        {back ? <GhostBtn style={{ padding: "5px 12px", fontSize: 12.5 }} onClick={back}>Back</GhostBtn> : <span />}
       </div>
       {drive?.name && (
         <div style={{ background: T.navy, padding: "9px 20px", display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, flexWrap: "wrap" }}>
@@ -1073,7 +1216,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
   );
 
   if (step==="pick") return (
-    <Wrap back={onBack}>
+    <Wrap back={null}>
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.inkFaint, marginBottom: 8 }}>Step 1 of 2</div>
         <h2 style={{ fontFamily: F.display, fontSize: mob ? 26 : 32, fontWeight: 400, margin: "0 0 8px", letterSpacing: "-0.5px" }}>Find your name</h2>
@@ -1236,7 +1379,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
   );
 
   if (step==="done") return (
-    <Wrap back={onBack}>
+    <Wrap back={null}>
       <div style={{ border: `1px solid ${finalSub?.status==="verified"?"#A8D9BE":"#E8CFA0"}`,
         borderLeft: `4px solid ${finalSub?.status==="verified"?T.pass:T.warn}`,
         borderRadius: 4, overflow: "hidden", background: "#fff" }}>
@@ -1271,7 +1414,7 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
           </div>
         )}
       </div>
-      <GhostBtn onClick={onBack} style={{ marginTop: 16, width: "100%" }}>Back to home</GhostBtn>
+      <GhostBtn onClick={() => { setSel(null); setScnd(null); setSt("pick"); }} style={{ marginTop: 16, width: "100%" }}>Back to class list</GhostBtn>
     </Wrap>
   );
 }
@@ -1333,8 +1476,9 @@ function StudentPublicPortal({ onBack }) {
 }
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [screen,  setScreen]  = useState("landing");
+function AppInner() {
+  const [screen,  setScreen]  = useState(() =>
+    new URLSearchParams(window.location.search).get("rep") ? "student" : "landing");
   const [repUser, setRepUser] = useState(null);
 
   useEffect(() => {
@@ -1357,4 +1501,36 @@ export default function App() {
   if (screen==="rep-auth") return <RepAuth onBack={() => setScreen("landing")} onLogin={rep => { setRepUser(rep); setScreen("rep"); }} />;
   if (screen==="rep")      return <RepDashboard rep={repUser} setRep={setRepUser} onLogout={logout} />;
   if (screen==="student")  return <StudentPublicPortal onBack={() => setScreen("landing")} />;
+}
+
+// If any screen throws while rendering, show the message instead of a blank white page
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("RepDesk render error:", error, info); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{ minHeight: "100vh", background: "#F5F4F0", fontFamily: "'Inter', sans-serif",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ textAlign: "center", maxWidth: 420 }}>
+          <div style={{ height: 3, background: "#E8400C", marginBottom: 40 }} />
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 28, color: "#0E1423", marginBottom: 12 }}>Something went wrong</div>
+          <p style={{ color: "#3D4A63", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+            Please reload the page. If it keeps happening, send this message to the developer.
+          </p>
+          <pre style={{ background: "#fff", border: "1px solid #DDD9D0", borderRadius: 4, padding: 12, fontSize: 12,
+            color: "#8C96A8", whiteSpace: "pre-wrap", wordBreak: "break-word", textAlign: "left", margin: "0 0 20px" }}>
+            {String(this.state.error && this.state.error.message || this.state.error)}
+          </pre>
+          <button onClick={() => window.location.reload()} style={{ background: "none", border: "1px solid #DDD9D0",
+            color: "#3D4A63", borderRadius: 4, padding: "10px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5 }}>Reload</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+export default function App() {
+  return <ErrorBoundary><AppInner /></ErrorBoundary>;
 }
