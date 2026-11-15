@@ -1102,6 +1102,26 @@ function RepFlags({ flagged, onApprove, onReject }) {
   );
 }
 
+// Compares the account number on a receipt with the rep's account.
+// Returns true (match), false (different account) or null (hidden digits, cannot tell).
+// Handles masked numbers such as 903****981, and OPay numbers written without the leading 0.
+function accountMatches(receiptAcc, repAcc) {
+  const r = String(receiptAcc || "").replace(/[\s-]/g, "").toUpperCase();
+  const t = String(repAcc || "").replace(/\D/g, "");
+  if (!r || !t) return true;
+  if (/^\d+$/.test(r)) return r === t || r.includes(t) || t.includes(r);
+  if (!/^[0-9*X.\u2022]+$/.test(r)) return null;
+  const versions = [t];
+  if (t.length === 11 && t[0] === "0") versions.push(t.slice(1));
+  let aligned = false;
+  for (const v of versions) {
+    if (v.length !== r.length) continue;
+    aligned = true;
+    if ([...r].every((ch, i) => !/\d/.test(ch) || ch === v[i])) return true;
+  }
+  return aligned ? false : null;
+}
+
 // ── STUDENT PORTAL ────────────────────────────────────────────────────────────
 function StudentPortal({ students, submissions, setSubmissions, repId, driveId, drive, repAccount, onBack }) {
   const mob = useIsMobile();
@@ -1119,8 +1139,18 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
   const validate = (data) => {
     const flags = [...(data.fraudFlags || [])];
 
-    if (submissions.map(s=>s.ref_no).includes(data.refNo)) {
+    // Some banks (Zenith, for one) print no reference at all. Those go to the rep instead of
+    // being compared against each other as the same "UNKNOWN" reference.
+    const normRef = x => String(x || "").replace(/\s/g, "").toUpperCase();
+    const ref = normRef(data.refNo);
+    if (!ref || ref === "UNKNOWN") {
+      flags.push("Reference number could not be read from the receipt");
+    } else if (submissions.some(s => normRef(s.ref_no) === ref)) {
       flags.push("Duplicate reference number");
+    }
+
+    if (!parseFloat(data.amount)) {
+      flags.push("Amount could not be read from the receipt");
     }
 
     const expected = parseFloat(drive?.amount);
@@ -1130,11 +1160,9 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
     }
 
     if (repAccount?.account_number && data.accountNumber) {
-      const repAcc     = repAccount.account_number.replace(/\s/g, "");
-      const receiptAcc = data.accountNumber.replace(/\s/g, "");
-      if (receiptAcc && !receiptAcc.includes(repAcc) && !repAcc.includes(receiptAcc)) {
-        flags.push("Account number mismatch — payment not sent to the rep's account");
-      }
+      const match = accountMatches(data.accountNumber, repAccount.account_number);
+      if (match === false) flags.push("Account number mismatch — payment not sent to the rep's account");
+      if (match === null)  flags.push("Destination account is hidden on the receipt and could not be verified");
     }
 
     return flags.length > 0 ? flags.join(" | ") : null;
@@ -1145,26 +1173,32 @@ function StudentPortal({ students, submissions, setSubmissions, repId, driveId, 
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const base64 = e.target.result.split(",")[1];
-        const mediaType = file.type || "image/jpeg";
-        const res = await fetch("/.netlify/functions/scan-receipt", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64, mediaType }),
-        });
-        const data = await res.json();
-        if (data.error) { show("Could not read receipt. Please try a clearer image.", "error"); setScan(false); return; }
-        setScnd({
-          refNo:         data.refNo         || "UNKNOWN",
-          amount:        data.amount        || 0,
-          bank:          data.bank          || "Unknown Bank",
-          date:          data.date          || today(),
-          accountNumber: data.accountNumber || "",
-          recipientName: data.recipientName || "",
-          senderName:    data.senderName    || "",
-          fraudFlags:    data.fraudFlags    || [],
-          flagged:       data.flagged       || false,
-        });
-        setScan(false);
+        try {
+          const base64 = e.target.result.split(",")[1];
+          const mediaType = file.type || "image/jpeg";
+          const res = await fetch("/.netlify/functions/scan-receipt", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: base64, mediaType }),
+          });
+          const data = await res.json();   // throws if the scanner is unreachable and a web page came back instead
+          if (data.error) { show("Could not read receipt. Please try a clearer image.", "error"); setScan(false); return; }
+          setScnd({
+            refNo:         data.refNo         || "UNKNOWN",
+            amount:        data.amount        || 0,
+            bank:          data.bank          || "Unknown Bank",
+            date:          data.date          || today(),
+            accountNumber: data.accountNumber || "",
+            recipientName: data.recipientName || "",
+            senderName:    data.senderName    || "",
+            fraudFlags:    data.fraudFlags    || [],
+            flagged:       data.flagged       || false,
+          });
+          setScan(false);
+        } catch (err) {
+          // Without this the "Reading receipt..." spinner would stay forever
+          show("Could not reach the receipt scanner. Please try again.", "error");
+          setScan(false);
+        }
       };
       reader.readAsDataURL(file);
     } catch (err) { show("Something went wrong scanning the receipt.", "error"); setScan(false); }

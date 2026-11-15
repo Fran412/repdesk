@@ -31,27 +31,28 @@ exports.handler = async function (event) {
 Perform TWO tasks:
 
 TASK 1 - Extract these fields. Return exact values as shown:
-- refNo: the transaction or reference number (full string, no spaces)
+- refNo: the transaction reference, transaction number or transaction ID exactly as printed (keep letters, digits and symbols, no spaces). Do NOT put the Session ID here. If the receipt only shows a Session ID, use null.
+- sessionId: the Session ID exactly as printed (digits only), or null if the receipt has no field labelled Session ID
 - amount: numeric amount only (e.g. 8000)
 - bank: the sending bank name (e.g. OPay, GTBank, First Bank)
 - date: the date shown on the receipt in YYYY-MM-DD format
-- accountNumber: the destination/recipient account number (the account money was sent TO)
+- accountNumber: the destination/recipient account number (the account money was sent TO). If it is partly hidden, copy it with the hidden digits as * (for example 903****981)
 - recipientName: the name of the recipient/beneficiary
 - senderName: the name of the sender
+Copy long numbers digit by digit. If you cannot read every digit clearly, use null for that field instead of guessing.
 
-TASK 2 - Image forensics. Examine the image carefully for:
-- Inconsistent fonts or font sizes in the same field type
-- Misaligned text or elements
-- Unusual compression artifacts or pixelation around specific areas
-- Signs that text has been overlaid or edited
-- Inconsistent color or brightness in specific regions
-- Any visual anomaly that suggests digital manipulation
+TASK 2 - Image forensics. Receipts from different banking apps look very different. Different fonts, dotted separators, watermark patterns, rounded or scalloped edges and large amount text are all NORMAL. Screenshots of screenshots and photos of a screen are also normal. Only report suspicious if you see clear signs of editing, such as:
+- A value in a different font, size, colour or sharpness from the matching values around it
+- A visibly different or patchy background around one value
+- Overlapping, duplicated or misaligned text inside one field
+- Text that looks pasted over the original
 
-IMPORTANT: Do NOT flag a date as suspicious just because it seems recent or you are uncertain about the current date. Today is ${new Date().toISOString().slice(0,10)} — only flag a date if it is clearly after today's date or if there is a visual anomaly in the date field itself.
+IMPORTANT: Do NOT flag a date as suspicious just because it seems recent or you are uncertain about the current date. Today is ${new Date().toISOString().slice(0,10)} — only flag a date if there is a visual anomaly in the date field itself.
 
 Return ONLY this JSON, no other text:
 {
-  "refNo": "full reference number",
+  "refNo": "transaction reference as printed, or null",
+  "sessionId": "session ID digits, or null",
   "amount": 0,
   "bank": "bank name",
   "date": "YYYY-MM-DD",
@@ -85,16 +86,21 @@ Return ONLY this JSON, no other text:
     const extracted = JSON.parse(match[0]);
     console.log("Extracted:", JSON.stringify(extracted));
 
-    // ── Step 2: Reference number date encoding check ───────────────────────
+    // ── Step 2: Check the identifiers against the receipt date ─────────────
+    // Only formats seen on real receipts are checked. Anything else is left alone.
     const flags = [];
 
-    if (extracted.refNo && extracted.date) {
-      const refDateFlag = checkRefDateEncoding(extracted.refNo, extracted.date, extracted.bank);
-      if (refDateFlag) flags.push(refDateFlag);
-    }
+    const sessionId = (extracted.sessionId || "").replace(/\s/g, "");
+    const refNo     = (extracted.refNo     || "").replace(/\s/g, "");
 
-    // ── Step 3: Internal consistency checks ───────────────────────────────
-    // Future date check removed — handled by reference date encoding check above
+    const idDateFlag = checkIdentifierDate([sessionId, refNo], extracted.date);
+    if (idDateFlag) flags.push(idDateFlag);
+
+    // ── Step 3: A receipt cannot be dated in the future ───────────────────
+    const latestAllowed = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(extracted.date || "") && extracted.date > latestAllowed) {
+      flags.push(`Receipt is dated in the future (${extracted.date})`);
+    }
 
     // ── Step 4: Image forensics ────────────────────────────────────────────
     if (extracted.forensics?.suspicious) {
@@ -103,7 +109,10 @@ Return ONLY this JSON, no other text:
 
     // ── Build result ───────────────────────────────────────────────────────
     const result = {
-      refNo:         extracted.refNo        || null,
+      // The 30-digit session ID is the same on every bank's receipt for one transfer, so it is the
+      // best identifier for spotting a reused receipt. Fall back to the printed reference.
+      refNo:         (/^\d{30}$/.test(sessionId) ? sessionId : (refNo || sessionId)) || null,
+      sessionId:     sessionId || null,
       amount:        extracted.amount       || 0,
       bank:          extracted.bank         || null,
       date:          extracted.date         || null,
@@ -128,68 +137,46 @@ Return ONLY this JSON, no other text:
   }
 };
 
-// ── Reference number date encoding patterns ───────────────────────────────────
-function checkRefDateEncoding(refNo, receiptDateStr, bank) {
-  if (!refNo || !receiptDateStr) return null;
+// ── Identifier date check ─────────────────────────────────────────────────────
+// Checked against real receipts (Moniepoint, GTBank, Access, First Bank):
+//   NIP session ID  30 digits = 6-digit institution code + yymmddhhmmss + 12-digit sequence
+//   First Bank      "UPF" + 3 digits + yymmddhhmmss + ...
+//   Access          "NXG" + 6-digit institution code + yymmddhhmmss + ...
+// OPay and PalmPay numbers do NOT carry the transaction date, so they are never date checked.
+// An unfamiliar format is not suspicious; it is simply not checked.
+const ID_RULES = [
+  { name: "Session ID",               test: s => /^\d{30}$/.test(s),       from: 6 },
+  { name: "First Bank reference",     test: s => /^UPF\d{3}\d{12}/.test(s), from: 6 },
+  { name: "Access reference",         test: s => /^NXG\d{6}\d{12}/.test(s), from: 9 },
+];
 
-  const ref = refNo.replace(/\s/g, "").toUpperCase();
-  // Parse as noon UTC to avoid timezone day-shift issues
-  const receiptDate = new Date(receiptDateStr + "T12:00:00Z");
-  if (isNaN(receiptDate.getTime())) return null;
+function stampToDate(stamp) {
+  const yy = +stamp.slice(0, 2), mm = +stamp.slice(2, 4), dd = +stamp.slice(4, 6);
+  const hh = +stamp.slice(6, 8), mi = +stamp.slice(8, 10), ss = +stamp.slice(10, 12);
+  if (yy < 20 || yy > 45) return null;
+  if (mm < 1 || mm > 12 || dd < 1 || hh > 23 || mi > 59 || ss > 59) return null;
+  if (dd > new Date(Date.UTC(2000 + yy, mm, 0)).getUTCDate()) return null;
+  return `20${stamp.slice(0, 2)}-${stamp.slice(2, 4)}-${stamp.slice(4, 6)}`;
+}
 
-  const year2  = String(receiptDate.getFullYear()).slice(2);  // "26"
-  const month  = String(receiptDate.getMonth() + 1).padStart(2, "0"); // "08"
-  const day    = String(receiptDate.getDate()).padStart(2, "0");       // "30"
+function checkIdentifierDate(candidates, receiptDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(receiptDate || "")) return null;
+  for (const raw of candidates) {
+    const id = String(raw || "").replace(/\s/g, "").toUpperCase();
+    const rule = ID_RULES.find(r => r.test(id));
+    if (!rule) continue;
 
-  // Pattern: YYMMDD at position 0 (OPay, many fintechs)
-  // e.g. ref starts with 260726 → July 26, 2026
-  const refPrefix6 = ref.slice(0, 6);
-  if (/^\d{6}$/.test(refPrefix6)) {
-    const encodedYear  = refPrefix6.slice(0, 2);
-    const encodedMonth = refPrefix6.slice(2, 4);
-    const encodedDay   = refPrefix6.slice(4, 6);
-
-    const monthValid = parseInt(encodedMonth) >= 1 && parseInt(encodedMonth) <= 12;
-    const dayValid   = parseInt(encodedDay)   >= 1 && parseInt(encodedDay)   <= 31;
-
-    if (monthValid && dayValid) {
-      // Encoded date does not match receipt date
-      if (encodedYear !== year2 || encodedMonth !== month || encodedDay !== day) {
-        const encodedDateStr = `20${encodedYear}-${encodedMonth}-${encodedDay}`;
-        return `Reference number encodes date ${encodedDateStr} but receipt shows ${receiptDateStr}`;
-      }
+    const encoded = stampToDate(id.slice(rule.from, rule.from + 12));
+    if (!encoded) {
+      return `${rule.name} does not contain a valid date. It may have been misread or altered`;
     }
-  }
-
-  // Pattern: YYYYMMDD embedded anywhere in ref (GTBank, Access)
-  const fullDatePattern = `${receiptDate.getFullYear()}${month}${day}`;
-  const altDatePattern  = `${year2}${month}${day}`;
-
-  // Check if ref contains ANY 6-digit date-like sequence that conflicts
-  const dateMatches = ref.match(/\d{6}/g);
-  if (dateMatches) {
-    for (const seg of dateMatches) {
-      const y = seg.slice(0, 2);
-      const m = seg.slice(2, 4);
-      const d = seg.slice(4, 6);
-      const mNum = parseInt(m);
-      const dNum = parseInt(d);
-      if (mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
-        // This looks like a date — check if it conflicts
-        if (y !== year2 || m !== month || d !== day) {
-          // Only flag if it's a significantly different date (more than 3 days off)
-          const encodedDate = new Date(`20${y}-${m}-${d}`);
-          if (!isNaN(encodedDate.getTime())) {
-            const diffDays = Math.abs((encodedDate - receiptDate) / (1000 * 60 * 60 * 24));
-            if (diffDays > 3) {
-              return `Reference number suggests date 20${y}-${m}-${d} but receipt shows ${receiptDateStr}`;
-            }
-          }
-        }
-        break; // Only check first date-like sequence
-      }
+    const gapDays = Math.abs(Date.parse(encoded + "T12:00:00Z") - Date.parse(receiptDate + "T12:00:00Z")) / 86400000;
+    if (gapDays > 1) {
+      return `${rule.name} was issued on ${encoded} but the receipt shows ${receiptDate}`;
     }
+    return null;   // matched a known format and the dates agree
   }
-
   return null;
 }
+
+module.exports.checkIdentifierDate = checkIdentifierDate;
