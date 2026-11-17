@@ -479,7 +479,7 @@ function RepDashboard({ rep, setRep, onLogout }) {
         <p style={{ color: T.inkMid, fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
           You don't have any payment drives yet. Create your first one to get started.
         </p>
-        <CreateDriveForm repId={rep.id} onCreated={d => { setDrives([d]); setActiveDrive(d); }} show={show} />
+        <CreateDriveForm repId={rep.id} drives={drives} onCreated={d => { setDrives([d]); setActiveDrive(d); }} show={show} />
       </div>
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
     </div>
@@ -548,10 +548,12 @@ function RepDashboard({ rep, setRep, onLogout }) {
             <p style={{ color: T.inkMid, fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
               Each drive has its own class list, student link, and submissions.
             </p>
-            <CreateDriveForm repId={rep.id} onCreated={d => {
+            <CreateDriveForm repId={rep.id} drives={drives} onCreated={(d, info) => {
               setDrives(p => [d, ...p]); setActiveDrive(d);
               setStudents([]); setSubmissions([]); setTab("overview");
-              show("New drive created.");
+              if (info?.copyFailed) show("Drive created, but the class list could not be copied. You can upload it from the Class List tab.", "warn");
+              else if (info?.copied) show(`New drive created with ${info.copied} student${info.copied !== 1 ? "s" : ""} copied.`);
+              else show("New drive created.");
             }} show={show} />
           </div>
         )}
@@ -574,11 +576,39 @@ function RepDashboard({ rep, setRep, onLogout }) {
 }
 
 // ── CREATE DRIVE FORM ─────────────────────────────────────────────────────────
-function CreateDriveForm({ repId, onCreated, show }) {
+// Copies the class list of one drive into another. Payments are not copied: every drive starts unpaid.
+async function copyClassList(fromDriveId, toDriveId, repId) {
+  const { data: source, error } = await supabase.from("students")
+    .select("name, matric").eq("drive_id", fromDriveId).order("name");
+  if (error) return { copied: 0, error };
+  if (!source || !source.length) return { copied: 0 };
+  const rows = source.map(s => ({ rep_id: repId, drive_id: toDriveId, name: s.name, matric: s.matric }));
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error: insertError } = await supabase.from("students").insert(rows.slice(i, i + 500));
+    if (insertError) return { copied: i, error: insertError };
+  }
+  return { copied: rows.length };
+}
+
+function CreateDriveForm({ repId, drives = [], onCreated, show }) {
+  const hasPrev = drives.length > 0;
   const [name,     setName]     = useState("");
   const [amount,   setAmount]   = useState("");
   const [deadline, setDeadline] = useState("");
   const [saving,   setSaving]   = useState(false);
+  // With an earlier drive available, the most recent one is pre-selected as the source of the class list
+  const [listMode, setListMode] = useState(hasPrev ? "copy" : "empty");
+  const [sourceId, setSourceId] = useState(hasPrev ? drives[0].id : "");
+  const [sourceCount, setSourceCount] = useState(null);
+
+  useEffect(() => {
+    if (listMode !== "copy" || !sourceId) { setSourceCount(null); return; }
+    let live = true;
+    setSourceCount(null);
+    supabase.from("students").select("id", { count: "exact", head: true }).eq("drive_id", sourceId)
+      .then(({ count }) => { if (live) setSourceCount(count ?? 0); });
+    return () => { live = false; };
+  }, [listMode, sourceId]);
 
   const create = async () => {
     if (!name.trim() || !amount) { show("Fill in drive name and amount.", "warn"); return; }
@@ -586,9 +616,32 @@ function CreateDriveForm({ repId, onCreated, show }) {
     const { data, error } = await supabase.from("drives").insert({
       rep_id: repId, name: name.trim(), amount: parseFloat(amount), deadline,
     }).select().single();
-    if (!error) { onCreated(data); }
-    else show(error.message, "error");
+    if (error) { show(error.message, "error"); setSaving(false); return; }
+
+    let info = {};
+    if (hasPrev && listMode === "copy" && sourceId) {
+      const res = await copyClassList(sourceId, data.id, repId);
+      info = { copied: res.copied, copyFailed: !!res.error };
+    }
+    onCreated(data, info);
     setSaving(false);
+  };
+
+  const choice = (value, title, children) => {
+    const on = listMode === value;
+    return (
+      <div onClick={() => setListMode(value)}
+        style={{ border: `1px solid ${on ? T.vermil : T.rule}`, background: on ? T.vermilBg : "#fff",
+          borderRadius: 4, padding: "12px 14px", cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+            border: `2px solid ${on ? T.vermil : T.ruleHard}`, background: on ? T.vermil : "#fff",
+            boxShadow: on ? "inset 0 0 0 2px #fff" : "none" }} />
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{title}</span>
+        </div>
+        {children && <div style={{ marginTop: 10, paddingLeft: 24 }}>{children}</div>}
+      </div>
+    );
   };
 
   return (
@@ -597,6 +650,28 @@ function CreateDriveForm({ repId, onCreated, show }) {
       <Input label="Payment purpose" placeholder="e.g. Departmental Excursion Levy" value={name} onChange={e => setName(e.target.value)} />
       <Input label="Amount (NGN)" type="number" placeholder="e.g. 5000" value={amount} onChange={e => setAmount(e.target.value)} />
       <Input label="Deadline (optional)" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+
+      {hasPrev && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: T.inkFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Class list</div>
+          {choice("copy", "Use the class list from a previous drive", listMode === "copy" && (
+            <>
+              <select value={sourceId} onClick={e => e.stopPropagation()} onChange={e => setSourceId(e.target.value)} style={inp}>
+                {drives.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <div style={{ fontSize: 12.5, color: T.inkFaint, marginTop: 8, lineHeight: 1.5 }}>
+                {sourceCount === null ? "Counting students..."
+                  : sourceCount === 0 ? "That drive has no students yet."
+                  : `${sourceCount} student${sourceCount !== 1 ? "s" : ""} will be copied. Payments are not copied, so everyone starts unpaid.`}
+              </div>
+            </>
+          ))}
+          {choice("empty", "Start with an empty class list", listMode === "empty" && (
+            <div style={{ fontSize: 12.5, color: T.inkFaint, lineHeight: 1.5 }}>You can add students or upload a file afterwards.</div>
+          ))}
+        </div>
+      )}
+
       <PrimaryBtn onClick={create} disabled={saving}>{saving ? "Creating..." : "Create drive"}</PrimaryBtn>
     </div>
   );
